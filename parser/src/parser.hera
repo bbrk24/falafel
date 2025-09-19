@@ -1,0 +1,96 @@
+Statements
+  _* (Statement _*)* ->
+    return $2.map(el => el[0])
+
+Identifier
+  /\w[\w\d]*/
+
+_
+  /\s+/
+  Comment
+
+Comment
+  "//" /[^\n]*/
+  "/*" /(?:[^*]|\*[^\/])*/ "*/"
+
+EOS
+  Comment* /[\n;]/
+  _* /(?=\})/
+  !. # EOF
+
+Statement
+  Declaration
+  Expression EOS -> $1
+
+Declaration
+  ClassDefinition
+  VarDeclaration
+
+InheritanceClause
+  ":" _* Identifier -> $3
+
+ClassBody
+  "{" _* (Declaration _*)* "}" ->
+    return $3.map(el => el[0])
+
+ClassDefinition
+  "class" _+ Identifier:name _* InheritanceClause?:base _* ClassBody:body ->
+    return { type: 'ClassDefinition', name, base, body }
+
+TypeClause
+  ":" _* Identifier -> $3
+
+VarDeclaration
+  "var" _+ Identifier:name _* TypeClause:declaredType _* "=" _* Expression:value EOS ->
+    return { type: 'VarDeclaration', name, declaredType, value }
+
+BaseExpression
+  FunctionCall
+  "(" Expression ")" -> $2
+  NumberLiteral
+  StringLiteral
+  Identifier ->
+    return { type: 'Identifier', name: $1 }
+
+FunctionCall
+  Identifier "(" _* ")" ->
+    return { type: 'FunctionCall', function: $1, arguments: [] }
+  Identifier "(" _* Expression:arg0 (_* "," _* Expression)*:args _* ","? _* ")" ->
+    const arguments_ = [
+      arg0,
+      ...args.map(el => el[3])
+    ];
+    return { type: 'FunctionCall', function: $1, arguments: arguments_ };
+
+NumberLiteral
+  /-?\d+/ ->
+    return { type: 'NumberLiteral', value: BigInt($0) }
+  
+  "-"? "0x" /[0-9a-fA-F]+/ ->
+    return { type: 'NumberLiteral', value: BigInt($0) }
+  
+  /-?\d+\.\d+(?:[eE][+\-]\d+)?/ ->
+    return { type: 'NumberLiteral', value: Number($0) }
+
+
+StringLiteral
+  /"(?:[^\\"\n]|\\(?:[\\"nrt]|u[0-9a-fA-F]{4}))*"/ ->
+    return { type: 'StringLiteral', value: JSON.parse($0) }
+
+PowExpression
+  (BaseExpression _* "**" _*)*:head BaseExpression:tail ->
+    return head.reduceRight((acc, curr) => {
+      return { type: 'BinaryExpression', lhs: curr[0], operator: "**", rhs: acc }
+    }, tail)
+
+MulExpression
+  PowExpression:first (_* ("*" / "/") _* PowExpression)*:rest ->
+    return rest.reduce((acc, curr) => {
+      return { type: 'BinaryExpression', lhs: acc, operator: curr[1], rhs: curr[3] }
+    }, first)
+
+Expression
+  MulExpression:first (_* ("+" / "-") _* MulExpression)*:rest ->
+    return rest.reduce((acc, curr) => {
+      return { type: 'BinaryExpression', lhs: acc, operator: curr[1], rhs: curr[3] }
+    }, first)
