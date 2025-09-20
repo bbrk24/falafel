@@ -88,7 +88,7 @@ public class Codegen
                 var utf16Length = Encoding.Unicode.GetByteCount(str);
                 var utf8Length = Encoding.UTF8.GetByteCount(str);
 
-                if (utf8Length <= utf16Length)
+                if (utf8Length < 15 || utf8Length <= utf16Length)
                 {
                     var escaped = EscapeLiteralUtf8(str);
                     if (utf8Length < 15)
