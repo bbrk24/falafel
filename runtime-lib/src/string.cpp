@@ -2,6 +2,7 @@
 
 #include <cuchar>
 #include <iostream>
+#include <utf8.h>
 
 String::~String() noexcept  {
     if (!m_flags.is_immortal && !m_flags.is_small) {
@@ -22,14 +23,8 @@ void String::print() {
             str = m_data.char16_ptr;
         }
 
-        char buffer[4];
-        mbstate_t state;
-        for (size_t i = 0U; i < m_length; ++i)
-        {
-            size_t rc = c16rtomb(buffer, str[i], &state);
-            if (rc != (size_t)-1)
-                std::cout << std::string_view{buffer, rc};
-        }
+        std::u16string std16str(str);
+        std::cout << reinterpret_cast<const char*>(utf8::utf16tou8(std16str).data());
     } else {
         if (m_flags.is_small) {
             std::cout << reinterpret_cast<const char*>(m_data.short_string);

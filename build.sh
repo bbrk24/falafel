@@ -27,7 +27,8 @@ mkdir -p dist/bin dist/obj
 
     # shellcheck disable=SC2086
     clang++ $clang_args -std=c++20 -WCL4 -Wnon-gcc -Wimplicit-fallthrough \
-        -shared -o dist/obj/libruntime.so -fPIC runtime-lib/src/*.cpp 
+        -shared -o dist/obj/libruntime.so -Iruntime-lib/src/utfcpp/source \
+        -fPIC runtime-lib/src/*.cpp
 } &
 
 (

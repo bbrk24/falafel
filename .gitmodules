@@ -1,0 +1,3 @@
+[submodule "runtime-lib/src/utfcpp"]
+	path = runtime-lib/src/utfcpp
+	url = git@github.com:nemtrif/utfcpp.git

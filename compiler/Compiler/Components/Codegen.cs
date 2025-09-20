@@ -88,7 +88,7 @@ public class Codegen
                 var utf16Length = Encoding.Unicode.GetByteCount(str);
                 var utf8Length = Encoding.UTF8.GetByteCount(str);
 
-                if (utf8Length < utf16Length)
+                if (utf8Length <= utf16Length)
                 {
                     var escaped = EscapeLiteralUtf8(str);
                     if (utf8Length < 15)
@@ -228,8 +228,9 @@ public class Codegen
     {
         var builder = new StringBuilder(s.Length);
 
-        foreach (var c in s)
+        for (var i = 0; i < s.Length; ++i)
         {
+            var c = s[i];
             if (SpecialEscapeSequences.TryGetValue(c, out var escape))
             {
                 builder.Append(escape);
@@ -240,8 +241,7 @@ public class Codegen
             }
             else
             {
-                var utf8Bytes = Encoding.UTF8.GetBytes([c]);
-                builder.AppendJoin("", utf8Bytes.Select(b => $"\\x{b:x2}"));
+                builder.Append(c);
             }
         }
 
@@ -264,7 +264,7 @@ public class Codegen
             }
             else
             {
-                builder.Append($"\\u{((int)c):x4}");
+                builder.Append(c);
             }
         }
 

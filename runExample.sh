@@ -9,8 +9,6 @@ tempcpp=$(mktemp --suffix .cpp)
 dist/bin/index.js "examples/$1" >"$tempjson" \
     && dist/bin/Compiler.exe "$tempjson" "$tempcpp" \
     && clang++ --std=c++20 -O1 -Idist/include -o "$1" dist/obj/*.so "$tempcpp"
-cat "$tempjson"
-cat "$tempcpp"
 result=$?
 rm "$tempjson" "$tempcpp"
 
