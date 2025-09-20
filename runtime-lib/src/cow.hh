@@ -1,11 +1,11 @@
 #pragma once
 
-#include <stdexcept>
-#include <cassert>
-#include <type_traits>
-#include <cstring>
-#include "refcount.hh"
 #include "max.hh"
+#include "refcount.hh"
+#include <cassert>
+#include <cstring>
+#include <stdexcept>
+#include <type_traits>
 
 template<typename T>
 concept Visitable = requires(T x, std::function<void(Object*)> visitor) {
@@ -13,14 +13,16 @@ concept Visitable = requires(T x, std::function<void(Object*)> visitor) {
 };
 
 template<typename T>
-    requires (!std::is_reference_v<T>)
+    requires(!std::is_reference_v<T>)
 class CowBuffer final {
 private:
     class Header final : public Object {
     public:
         size_t m_length;
+
     protected:
-        inline void visit_children(std::function<void(Object*)> visitor) final override {
+        inline void visit_children(std::function<void(Object*)> visitor) final override
+        {
             if constexpr (std::is_convertible_v<T, Object*>) {
                 T* base_pointer = reinterpret_cast<T*>(reinterpret_cast<char*>(this) + header_offset());
                 for (size_t i = 0; i < m_length; ++i) {
@@ -36,26 +38,31 @@ private:
     };
 
 public:
-    constexpr CowBuffer() noexcept : m_pointer(nullptr), m_capacity(0U) {}
-    
-    CowBuffer(size_t capacity) : m_pointer(nullptr) {
+    constexpr CowBuffer() noexcept : m_pointer(nullptr), m_capacity(0U) { }
+
+    CowBuffer(size_t capacity) : m_pointer(nullptr)
+    {
         realloc(capacity);
     }
-    
-    CowBuffer(const CowBuffer<T>& other) noexcept : m_pointer(other.m_pointer), m_capacity(other.m_capacity) {
+
+    CowBuffer(const CowBuffer<T>& other) noexcept : m_pointer(other.m_pointer), m_capacity(other.m_capacity)
+    {
         static_cast<Object*>(*this)->retain();
     }
 
-    CowBuffer(CowBuffer<T>&& other) noexcept : m_pointer(other.m_pointer), m_capacity(other.m_capacity) {
+    CowBuffer(CowBuffer<T>&& other) noexcept : m_pointer(other.m_pointer), m_capacity(other.m_capacity)
+    {
         other.m_capacity = 0U;
         other.m_pointer = nullptr;
     }
 
-    ~CowBuffer() {
+    ~CowBuffer()
+    {
         clear();
     }
 
-    CowBuffer<T>& operator=(const CowBuffer<T>& other) {
+    CowBuffer<T>& operator=(const CowBuffer<T>& other)
+    {
         if (m_pointer != nullptr) {
             static_cast<Object*>(*this)->release();
         }
@@ -66,7 +73,8 @@ public:
         static_cast<Object*>(*this)->retain();
     }
 
-    CowBuffer<T>& operator=(CowBuffer<T>&& other) {
+    CowBuffer<T>& operator=(CowBuffer<T>&& other)
+    {
         if (m_pointer != nullptr) {
             static_cast<Object*>(*this)->release();
         }
@@ -78,7 +86,8 @@ public:
         other.m_capacity = 0U;
     }
 
-    void ensure_unique(size_t capacity) {
+    void ensure_unique(size_t capacity)
+    {
         if (m_pointer == nullptr) {
             realloc(capacity);
             return;
@@ -107,7 +116,7 @@ public:
                 T* bptr = reinterpret_cast<T*>(m_pointer);
                 const T* old_bptr = reinterpret_cast<T*>(old_ptr);
                 for (size_t i = 0; i < old_length; ++i) {
-                    new(reinterpret_cast<void*>(bptr + i)) T(old_bptr[i]);
+                    new (reinterpret_cast<void*>(bptr + i)) T(old_bptr[i]);
                 }
             }
 
@@ -115,20 +124,22 @@ public:
         }
     }
 
-    void ensure_unique() {
+    void ensure_unique()
+    {
         ensure_unique(length());
     }
-    
-    void realloc(size_t capacity) {
+
+    void realloc(size_t capacity)
+    {
         if (capacity < length()) {
             throw std::logic_error("Capacity cannot be less than length");
         }
 
-        size_t total_size = capacity * sizeof (T) + sizeof (Header) + get_padding();
+        size_t total_size = capacity * sizeof(T) + sizeof(Header) + get_padding();
         if (m_pointer == nullptr) {
             if (capacity > 0U) {
                 void* location = malloc(total_size);
-                Header* header_ptr = new(location) Header();
+                Header* header_ptr = new (location) Header();
                 header_ptr->m_length = 0U;
                 m_pointer = reinterpret_cast<char*>(location) + header_offset();
             }
@@ -151,17 +162,20 @@ public:
         m_capacity = capacity;
     }
 
-    T& operator[](size_t index) {
+    T& operator[](size_t index)
+    {
         assert(index < length());
         return base_pointer()[index];
     }
 
-    const T& operator[](size_t index) const {
+    const T& operator[](size_t index) const
+    {
         assert(index < length());
         return base_pointer()[index];
     }
 
-    size_t length() const noexcept {
+    size_t length() const noexcept
+    {
         if (m_pointer == nullptr) {
             return 0U;
         }
@@ -169,20 +183,22 @@ public:
         Header* obj_ptr = reinterpret_cast<Header*>(class_header_ptr);
         return obj_ptr->m_length;
     }
-    
-    size_t& length_mut()  {
+
+    size_t& length_mut()
+    {
         char* class_header_ptr = m_pointer - header_offset();
         Header* obj_ptr = reinterpret_cast<Header*>(class_header_ptr);
         return obj_ptr->m_length;
     }
 
-    void clear() {
+    void clear()
+    {
         if constexpr (!std::is_trivially_destructible_v<T>) {
             for (size_t i = 0; i < length(); ++i) {
                 reinterpret_cast<T*>(m_pointer)[i].~T();
             }
         }
-        
+
         if (m_pointer != nullptr) {
             static_cast<Object*>(*this)->release();
             m_pointer = nullptr;
@@ -191,31 +207,37 @@ public:
         m_capacity = 0U;
     }
 
-    void ensure_capacity_at_least(size_t min_capacity) {
+    void ensure_capacity_at_least(size_t min_capacity)
+    {
         if (m_capacity < min_capacity) {
             realloc(max(min_capacity, m_capacity * 7 / 4));
         }
     }
 
-    T* base_pointer() noexcept {
+    T* base_pointer() noexcept
+    {
         return reinterpret_cast<T*>(m_pointer);
     }
 
-    const T* base_pointer() const noexcept {
+    const T* base_pointer() const noexcept
+    {
         return reinterpret_cast<T*>(m_pointer);
     }
 
-    T* operator+(ptrdiff_t offset) {
+    T* operator+(ptrdiff_t offset)
+    {
         assert(offset >= 0 && offset < m_capacity);
         return base_pointer() + offset;
     }
 
-    const T* operator+(ptrdiff_t offset) const {
+    const T* operator+(ptrdiff_t offset) const
+    {
         assert(offset >= 0 && offset < m_capacity);
         return base_pointer() + offset;
     }
 
-    operator Object*() noexcept {
+    operator Object*() noexcept
+    {
         if (m_pointer == nullptr) {
             return nullptr;
         }
@@ -223,19 +245,22 @@ public:
         Header* obj_ptr = reinterpret_cast<Header*>(class_header_ptr);
         return static_cast<Object*>(obj_ptr);
     }
+
 private:
     char* m_pointer;
     size_t m_capacity;
 
-    consteval static size_t get_padding() noexcept {
-        if (sizeof (Header) % alignof (T) == 0U) {
+    consteval static size_t get_padding() noexcept
+    {
+        if (sizeof(Header) % alignof(T) == 0U) {
             return 0U;
         }
 
-        return alignof (T) - (sizeof (Header) % alignof (T));
+        return alignof(T) - (sizeof(Header) % alignof(T));
     }
 
-    consteval static ptrdiff_t header_offset() noexcept {
-        return static_cast<ptrdiff_t>(sizeof (Header) + get_padding());
+    consteval static ptrdiff_t header_offset() noexcept
+    {
+        return static_cast<ptrdiff_t>(sizeof(Header) + get_padding());
     }
 };

@@ -1,4 +1,4 @@
-#pragma once 
+#pragma once
 
 #include <cstdint>
 #include <cstdlib>
@@ -11,18 +11,19 @@
 #define MAX_NUM_ROOTS 1024
 #endif
 
-enum class ObjectColor: uint_least8_t {
+enum class ObjectColor : uint_least8_t {
     black,
     gray,
     white,
     purple,
 };
 
-struct ImmortalMarker {};
+struct ImmortalMarker { };
 
 class Object {
 public:
-    static inline void* operator new(size_t size) {
+    static inline void* operator new(size_t size)
+    {
         void* ptr = malloc(size);
         if (ptr == nullptr) {
             collect_cycles();
@@ -35,25 +36,29 @@ public:
         return ptr;
     }
 
-    static inline void* operator new(size_t size, void* location) noexcept {
+    static inline void* operator new(size_t size, void* location) noexcept
+    {
         return ::operator new(size, location);
     }
 
     void retain() noexcept;
     void release();
 
-    constexpr bool is_unique() const noexcept {
+    constexpr bool is_unique() const noexcept
+    {
         return m_refcount < 2U;
     }
 
     static void collect_cycles();
 
-    constexpr Object() noexcept : m_refcount(1U), m_color(ObjectColor::black), m_buffered(false) {}
-    constexpr Object(ImmortalMarker) noexcept : m_refcount(UINTPTR_MAX), m_color(ObjectColor::black), m_buffered(false) {}
+    constexpr Object() noexcept : m_refcount(1U), m_color(ObjectColor::black), m_buffered(false) { }
+    constexpr Object(ImmortalMarker) noexcept : m_refcount(UINTPTR_MAX), m_color(ObjectColor::black), m_buffered(false) { }
     Object(const Object&) = delete;
     virtual ~Object() = default;
+
 protected:
     virtual void visit_children(std::function<void(Object*)> visitor);
+
 private:
     uintptr_t m_refcount;
     ObjectColor m_color : 3;
@@ -71,27 +76,31 @@ private:
 template<typename T>
 class RcPointer final {
 public:
-    constexpr RcPointer(T* obj) : m_obj(obj) {}
-    constexpr RcPointer() : m_obj(nullptr) {}
+    constexpr RcPointer(T* obj) : m_obj(obj) { }
+    constexpr RcPointer() : m_obj(nullptr) { }
 
-    inline RcPointer(const RcPointer<T>& other) : m_obj(other.m_obj) {
+    inline RcPointer(const RcPointer<T>& other) : m_obj(other.m_obj)
+    {
         if (m_obj != nullptr) {
             m_obj->retain();
         }
     }
 
-    inline RcPointer(RcPointer<T>&& other) : m_obj(other.m_obj) {
+    inline RcPointer(RcPointer<T>&& other) : m_obj(other.m_obj)
+    {
         other.m_obj = nullptr;
     }
 
-    inline ~RcPointer() {
+    inline ~RcPointer()
+    {
         if (m_obj != nullptr) {
             m_obj->release();
             m_obj = nullptr;
         }
     }
 
-    inline RcPointer<T>& operator=(const RcPointer<T>& other) {
+    inline RcPointer<T>& operator=(const RcPointer<T>& other)
+    {
         if (m_obj != nullptr) {
             m_obj->release();
         }
@@ -101,7 +110,8 @@ public:
         }
         return *this;
     }
-    inline RcPointer<T>& operator=(RcPointer<T>&& other) {
+    inline RcPointer<T>& operator=(RcPointer<T>&& other)
+    {
         if (m_obj != nullptr) {
             m_obj->release();
         }
@@ -110,24 +120,30 @@ public:
         return *this;
     }
 
-    inline void null_without_release() noexcept {
+    inline void null_without_release() noexcept
+    {
         m_obj = nullptr;
     }
 
-    constexpr T& operator*() const {
+    constexpr T& operator*() const
+    {
         return *m_obj;
     }
-    constexpr T* operator->() const noexcept {
+    constexpr T* operator->() const noexcept
+    {
         return m_obj;
     }
 
-    inline operator T*() noexcept {
+    constexpr operator T*() noexcept
+    {
         return m_obj;
     }
 
-    constexpr operator bool() const noexcept {
+    constexpr operator bool() const noexcept
+    {
         return m_obj != nullptr;
     }
+
 private:
     T* m_obj;
 };

@@ -1,0 +1,5 @@
+BasedOnStyle: WebKit
+AlignAfterOpenBracket: BlockIndent
+BreakConstructorInitializers: AfterColon
+PenaltyReturnTypeOnItsOwnLine: 219
+SpaceAfterTemplateKeyword: false

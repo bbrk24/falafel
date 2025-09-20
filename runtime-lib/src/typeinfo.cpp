@@ -1,7 +1,8 @@
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
 
-uint64_t hash_name(const unsigned char* name) noexcept {
+uint64_t hash_name(const unsigned char* name) noexcept
+{
     uint64_t h = 0;
     size_t i = 0;
     while (name[i]) {
