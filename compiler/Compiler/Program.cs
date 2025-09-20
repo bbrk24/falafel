@@ -1,12 +1,13 @@
-﻿using Compiler.Models;
-using System.Text.Json;
+﻿using System.Text.Json;
+using Compiler.Models;
 
 var jsonContent = File.ReadAllText(args[0]);
 
-var decoded = JsonSerializer.Deserialize<Dictionary<string, IEnumerable<AstNode>>>(
-    jsonContent,
-    new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
-);
+var decoded =
+    JsonSerializer.Deserialize<Dictionary<string, IEnumerable<AstNode>>>(
+        jsonContent,
+        new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
+    ) ?? throw new Exception("Unexpected JSON null");
 
 foreach (var (filename, nodes) in decoded)
 {
@@ -20,7 +21,11 @@ foreach (var (filename, nodes) in decoded)
         }
         else
         {
-            Console.WriteLine("Node is not a {0}, it is a {1}", typeof(FunctionCall), node.GetType());
+            Console.WriteLine(
+                "Node is not a {0}, it is a {1}",
+                typeof(FunctionCall),
+                node.GetType()
+            );
         }
     }
 }

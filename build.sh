@@ -8,12 +8,11 @@ mkdir -p dist/bin dist/obj
 
 (
     cd compiler
-    dotnet build -c "$config"
+    dotnet build -c "$config" >/dev/null 
 
     basename=Compiler/bin/$config/net8.0/Compiler
-    cp "$basename.exe" "$basename.dll" ../dist/bin/ &
-    jq -c . <"$basename.runtimeconfig.json" >../dist/bin/Compiler.runtimeconfig.json &
-    wait
+    cp "$basename.exe" "$basename.dll" ../dist/bin/
+    jq -c <"$basename.runtimeconfig.json" >../dist/bin/Compiler.runtimeconfig.json
     chmod +x ../dist/bin/Compiler.exe
 ) &
 

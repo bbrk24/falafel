@@ -1,5 +1,5 @@
-using Compiler.Util;
 using System.Text.Json.Serialization;
+using Compiler.Util;
 
 namespace Compiler.Models;
 
@@ -10,9 +10,9 @@ public interface AstNode
 }
 
 [JsonConverter(typeof(AstJsonConverter))]
-public interface Declaration: AstNode {}
+public interface Declaration : AstNode { }
 
-public class ClassDefinition: Declaration
+public class ClassDefinition : Declaration
 {
     public string Type { get; set; }
     public string Name { get; set; }
@@ -20,7 +20,7 @@ public class ClassDefinition: Declaration
     public IEnumerable<Declaration> Body { get; set; }
 }
 
-public class VarDeclaration: Declaration
+public class VarDeclaration : Declaration
 {
     public string Type { get; set; }
     public string Name { get; set; }
@@ -29,28 +29,28 @@ public class VarDeclaration: Declaration
 }
 
 [JsonConverter(typeof(AstJsonConverter))]
-public interface Expression: AstNode {}
+public interface Expression : AstNode { }
 
-public class FunctionCall: Expression
+public class FunctionCall : Expression
 {
     public string Type { get; set; }
     public string Function { get; set; }
     public IEnumerable<Expression> Arguments { get; set; }
 }
 
-public class NumberLiteral: Expression
+public class NumberLiteral : Expression
 {
     public string Type { get; set; }
     public decimal Value { get; set; }
 }
 
-public class StringLiteral: Expression
+public class StringLiteral : Expression
 {
     public string Type { get; set; }
     public string Value { get; set; }
 }
 
-public class BinaryExpression: Expression
+public class BinaryExpression : Expression
 {
     public string Type { get; set; }
     public Expression Lhs { get; set; }

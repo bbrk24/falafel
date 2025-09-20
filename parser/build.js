@@ -10,8 +10,6 @@ await esbuild.build({
     format: 'esm',
     plugins: [hera()],
     minify: true,
-    banner: {
-        'js': '#!/usr/bin/env node'
-    },
+    banner: { js: '#!/usr/bin/env node' },
     sourcemap: 'external',
 });
