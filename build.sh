@@ -8,7 +8,7 @@ mkdir -p dist/bin dist/obj
 
 (
     cd compiler
-    dotnet build -c "$config" >/dev/null 
+    dotnet build -c "$config" # >/dev/null 
 
     basename=Compiler/bin/$config/net8.0/Compiler
     cp "$basename.exe" "$basename.dll" ../dist/bin/

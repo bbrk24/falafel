@@ -17,9 +17,4 @@ public static class EnumerableUtil
         }
         return dict;
     }
-
-    public static OrderedDictionary ToOrderedDictionary<T>(
-        this IEnumerable<T> source,
-        Func<T, object> keySelector
-    ) => ToOrderedDictionary(source, keySelector, el => el);
 }

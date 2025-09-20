@@ -17,18 +17,18 @@ public static class BuiltIns
     public static readonly ConcreteType Double = new() { Name = "Double", IsObject = false };
     public static readonly ConcreteType Float = new() { Name = "Float", IsObject = false };
 
-    public static readonly IReadOnlyDictionary<string, Type> Types = new List<ConcreteType>
-    {
+    public static readonly IReadOnlyCollection<Type> Types =
+    [
         Int,
-        new() { Name = "Bool", IsObject = false },
+        new ConcreteType() { Name = "Bool", IsObject = false },
         Double,
         Float,
         Void,
         Object,
         String,
-    }.ToFrozenDictionary(t => t.Name);
+    ];
 
-    public static readonly IReadOnlyCollection<Method> GlobalMethods =
+    public static readonly IReadOnlyCollection<Method> Methods =
     [
         new Method
         {

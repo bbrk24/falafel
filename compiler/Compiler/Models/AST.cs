@@ -19,8 +19,9 @@ public class ClassDefinition : Declaration
 {
     public string Type { get; set; }
     public string Name { get; set; }
-    public string Base { get; set; }
+    public AstType? Base { get; set; }
     public IEnumerable<Declaration> Body { get; set; }
+    public bool Final { get; set; }
 }
 
 public class VarDeclaration : Declaration
@@ -35,6 +36,15 @@ public class AstType
 {
     public string Name { get; set; }
     public IEnumerable<AstType> Arguments { get; set; }
+
+    public override string ToString()
+    {
+        if (Arguments.Any())
+        {
+            return $"{Name}<{string.Join(", ", Arguments)}>";
+        }
+        return Name;
+    }
 }
 
 [JsonConverter(typeof(AstJsonConverter))]
@@ -51,6 +61,7 @@ public class NumberLiteral : Expression
 {
     public string Type { get; set; }
     public decimal Value { get; set; }
+    public bool IsDecimal { get; set; }
 }
 
 public class StringLiteral : Expression
@@ -65,4 +76,10 @@ public class BinaryExpression : Expression
     public Expression Lhs { get; set; }
     public Expression Rhs { get; set; }
     public string Operator { get; set; }
+}
+
+public class Identifier : Expression
+{
+    public string Type { get; set; }
+    public string Name { get; set; }
 }

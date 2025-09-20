@@ -1,11 +1,21 @@
 namespace Compiler.Models;
 
-public class Type
+public abstract class Type
 {
     public string Name { get; set; }
+    public abstract bool IsInheritable { get; set; }
+
+    public override string ToString() => Name;
 }
 
-public class GenericPlaceholder : Type;
+public class GenericPlaceholder : Type
+{
+    public override bool IsInheritable
+    {
+        get => false;
+        set => throw new NotSupportedException();
+    }
+}
 
 public class ConcreteType : Type
 {
@@ -28,7 +38,7 @@ public class ConcreteType : Type
     }
 
     private bool _isInheritable;
-    public bool IsInheritable
+    public override bool IsInheritable
     {
         get => _isInheritable;
         set
@@ -52,9 +62,21 @@ public class Property
 public class Method
 {
     public string Name { get; set; }
+    public Type ThisType { get; set; } = BuiltIns.Void;
     public ICollection<GenericPlaceholder> GenericTypes { get; set; } = [];
     public ICollection<Type> ArgumentTypes { get; set; } = [];
     public Type ReturnType { get; set; }
+
+    public override string ToString() =>
+        $@"func {
+            (ThisType == BuiltIns.Void ? "" : ThisType.ToString() + '.')
+        }{
+            Name
+        }({
+            string.Join(", ", ArgumentTypes.Select(t => t.ToString()))
+        }) -> {
+            ReturnType
+        }";
 }
 
 public enum OperatorFixity
@@ -73,4 +95,12 @@ public class Operator
     public Type ReturnType { get; set; }
     public bool IsCppOperator { get; set; }
     public string CppName { get; set; }
+
+    public override string ToString() => $"{Fixity} operator {Name} returning {ReturnType}";
+}
+
+public class Variable
+{
+    public string Name { get; set; }
+    public Type Type { get; set; }
 }

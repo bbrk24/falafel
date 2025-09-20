@@ -34,8 +34,8 @@ ClassBody
     return $3.map(el => el[0])
 
 ClassDefinition
-  "class" _+ Identifier:name _* InheritanceClause?:base _* ClassBody:body ->
-    return { type: 'ClassDefinition', name, base, body }
+  "final"?:final _+ "class" _+ Identifier:name _* InheritanceClause?:base _* ClassBody:body ->
+    return { type: 'ClassDefinition', name, base, body, final: final != null }
 
 Type
   Identifier ->
@@ -73,15 +73,14 @@ FunctionCall
     return { type: 'FunctionCall', function: $1, arguments: arguments_ };
 
 NumberLiteral
-  /-?\d+/ ->
-    return { type: 'NumberLiteral', value: BigInt($0) }
-  
   "-"? "0x" /[0-9a-fA-F]+/ ->
-    return { type: 'NumberLiteral', value: BigInt($0) }
-  
-  /-?\d+\.\d+(?:[eE][+\-]\d+)?/ ->
-    return { type: 'NumberLiteral', value: Number($0) }
+    return { type: 'NumberLiteral', value: BigInt($0), isDecimal: false }
 
+  /-?\d+\.\d+(?:[eE][+\-]\d+)?/ ->
+    return { type: 'NumberLiteral', value: Number($0), isDecimal: true }
+
+  /-?\d+/ ->
+    return { type: 'NumberLiteral', value: BigInt($0), isDecimal: false }
 
 StringLiteral
   /"(?:[^\\"\n]|\\(?:[\\"nrt]|u[0-9a-fA-F]{4}))*"/ ->
