@@ -138,3 +138,7 @@ private:
     size_t m_length;
     size_t m_capacity;
 };
+
+inline void print(String* strPointer) {
+    strPointer->print();
+}

@@ -57,11 +57,16 @@ public class FunctionCall : Expression
     public IEnumerable<Expression> Arguments { get; set; }
 }
 
-public class NumberLiteral : Expression
+public class IntegerLiteral : Expression
 {
     public string Type { get; set; }
-    public decimal Value { get; set; }
-    public bool IsDecimal { get; set; }
+    public long Value { get; set; }
+}
+
+public class DecimalLiteral : Expression
+{
+    public string Type { get; set; }
+    public double Value { get; set; }
 }
 
 public class StringLiteral : Expression

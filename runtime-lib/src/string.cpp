@@ -24,7 +24,7 @@ void String::print() {
 
         char buffer[4];
         mbstate_t state;
-        for (size_t i = 0; i < m_length; ++i)
+        for (size_t i = 0U; i < m_length; ++i)
         {
             size_t rc = c16rtomb(buffer, str[i], &state);
             if (rc != (size_t)-1)
@@ -39,6 +39,7 @@ void String::print() {
             std::cout << reinterpret_cast<const char*>(m_data.char8_ptr);
         }
     }
+    std::cout << '\n';
 }
 
 void String::visit_children(std::function<void(Object*)>) {}

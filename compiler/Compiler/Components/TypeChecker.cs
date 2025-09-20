@@ -1,6 +1,6 @@
 using Compiler.Models;
 
-namespace Compiler.Util;
+namespace Compiler.Components;
 
 public class TypeChecker
 {
@@ -20,11 +20,11 @@ public class TypeChecker
         _knownVariables = [.. other._knownVariables];
     }
 
-    public void CheckTypes(IEnumerable<AstNode> program)
+    public IEnumerable<TypeCheckedStatement> CheckTypes(IEnumerable<AstNode> program)
     {
         foreach (var cd in program.OfType<ClassDefinition>())
         {
-            CheckClassDefinition(cd);
+            yield return CheckClassDefinition(cd);
         }
 
         foreach (var node in program.Where(node => node is not ClassDefinition))
@@ -34,13 +34,19 @@ public class TypeChecker
                 var declType =
                     LookupType(vd.DeclaredType)
                     ?? throw new Exception($"Unrecognized type {vd.DeclaredType}");
-                CheckExpressionType(vd.Value, declType);
+                var checkedValue = CheckExpressionType(vd.Value, declType);
                 var variable = new Variable { Name = vd.Name, Type = declType };
                 _knownVariables.Add(variable);
+                yield return new TypeCheckedVar
+                {
+                    Name = vd.Name,
+                    Type = declType,
+                    Value = checkedValue,
+                };
             }
             else if (node is Expression e)
             {
-                CheckExpressionType(e, null);
+                yield return CheckExpressionType(e, null);
             }
             else
             {
@@ -49,17 +55,19 @@ public class TypeChecker
         }
     }
 
-    private static void ExpectOneSuccess<T>(IEnumerable<T> options, Action<T> action)
-        where T : notnull
+    private static TReturn ExpectOneSuccess<TOption, TReturn>(
+        IEnumerable<TOption> options,
+        Func<TOption, TReturn> transform
+    )
+        where TOption : notnull
     {
         var exceptions = new List<Exception>();
-        var successes = new List<T>();
+        var successes = new List<(TOption, TReturn)>();
         foreach (var opt in options)
         {
             try
             {
-                action(opt);
-                successes.Add(opt);
+                successes.Add((opt, transform(opt)));
             }
             catch (Exception e)
             {
@@ -72,16 +80,16 @@ public class TypeChecker
             case 0:
                 throw new AggregateException(exceptions);
             case 1:
-                return;
+                return successes[0].Item2;
             default:
                 throw new Exception(
                     "Multiple matches found: "
-                        + string.Join(", ", successes.Select(s => s.ToString()))
+                        + string.Join(", ", successes.Select(s => s.Item1.ToString()))
                 );
         }
     }
 
-    public void CheckExpressionType(Expression expr, Models.Type? expectedType)
+    public TypeCheckedExpression CheckExpressionType(Expression expr, Models.Type? expectedType)
     {
         if (expr is FunctionCall fc)
         {
@@ -114,24 +122,43 @@ public class TypeChecker
                 );
             }
 
-            ExpectOneSuccess(
+            return ExpectOneSuccess(
                 candidateFunctions,
                 (f) =>
                 {
-                    foreach (
-                        var (argExpr, argType) in Enumerable.Zip(fc.Arguments, f.ArgumentTypes)
-                    )
-                    {
-                        CheckExpressionType(argExpr, argType);
-                    }
+                    var arguments = Enumerable
+                        .Zip(fc.Arguments, f.ArgumentTypes)
+                        .Select(t => CheckExpressionType(t.Item1, t.Item2));
+                    return new TypeCheckedFunctionCall { Method = f, Arguments = arguments };
                 }
             );
         }
-        else if (expr is NumberLiteral nl)
+        else if (expr is DecimalLiteral dl)
         {
             if (expectedType is null)
             {
-                throw new Exception("A number literal should not be a statement by itself.");
+                throw new Exception("A decimal literal should not be a statement by itself.");
+            }
+
+            if (expectedType == BuiltIns.Float)
+            {
+                if (Math.Abs(dl.Value) > (double)float.MaxValue)
+                {
+                    throw new Exception($"Decimal literal is too large to store as Float");
+                }
+            }
+            else if (expectedType != BuiltIns.Double)
+            {
+                throw new Exception($"{expectedType} cannot be expressed by decimal literal");
+            }
+
+            return new TypedDecimalLiteral { Value = dl.Value, Type = expectedType };
+        }
+        else if (expr is IntegerLiteral il)
+        {
+            if (expectedType is null)
+            {
+                throw new Exception("An integer literal should not be a statement by itself.");
             }
 
             if (
@@ -140,20 +167,19 @@ public class TypeChecker
                 && expectedType != BuiltIns.Double
             )
             {
-                throw new Exception($"{expectedType} cannot be expressed by number literal");
+                throw new Exception($"{expectedType} cannot be expressed by integer literal");
             }
 
-            if (nl.IsDecimal && expectedType == BuiltIns.Int)
-            {
-                throw new Exception("Int cannot be represented by decimal literal");
-            }
+            return new TypedIntegerLiteral { Value = il.Value, Type = expectedType };
         }
-        else if (expr is StringLiteral)
+        else if (expr is StringLiteral sl)
         {
             if (expectedType != BuiltIns.String)
             {
                 throw new Exception("Only String instances can be represented by string literals");
             }
+
+            return new TypeCheckedStringLiteral { Value = sl.Value };
         }
         else if (expr is BinaryExpression be)
         {
@@ -171,12 +197,18 @@ public class TypeChecker
                 }
             }
 
-            ExpectOneSuccess(
+            return ExpectOneSuccess(
                 ops,
                 (op) =>
                 {
-                    CheckExpressionType(be.Lhs, op.LhsType);
-                    CheckExpressionType(be.Rhs, op.RhsType);
+                    var lhs = CheckExpressionType(be.Lhs, op.LhsType);
+                    var rhs = CheckExpressionType(be.Rhs, op.RhsType);
+                    return new TypeCheckedOperatorCall
+                    {
+                        Operator = op,
+                        Lhs = lhs,
+                        Rhs = rhs,
+                    };
                 }
             );
         }
@@ -192,6 +224,8 @@ public class TypeChecker
                     $"Type mismatch: {variable.Name} is {variable.Type}; expected {expectedType}"
                 );
             }
+
+            return new TypeCheckedIdentifier { Name = i.Name };
         }
         else
         {
@@ -199,7 +233,7 @@ public class TypeChecker
         }
     }
 
-    private void CheckClassDefinition(ClassDefinition cd)
+    private TypeCheckedClass CheckClassDefinition(ClassDefinition cd)
     {
         Models.Type? baseType;
         if (cd.Base is null)
@@ -225,7 +259,9 @@ public class TypeChecker
         _knownTypes.Add(thisType);
 
         // TODO: add variables declared in here to thisType.Properties
-        new TypeChecker(this).CheckTypes(cd.Body);
+        var body = new TypeChecker(this).CheckTypes(cd.Body);
+
+        return new() { Type = thisType, Body = body };
     }
 
     public Models.Type? LookupType(AstType type)

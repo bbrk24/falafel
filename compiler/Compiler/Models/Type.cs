@@ -68,7 +68,7 @@ public class Method
     public Type ReturnType { get; set; }
 
     public override string ToString() =>
-        $@"func {
+        $@"{
             (ThisType == BuiltIns.Void ? "" : ThisType.ToString() + '.')
         }{
             Name

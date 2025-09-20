@@ -8,11 +8,12 @@ mkdir -p dist/bin dist/obj
 
 (
     cd compiler
-    dotnet build -c "$config" # >/dev/null 
+    dotnet build -c "$config"
 
-    basename=Compiler/bin/$config/net8.0/Compiler
-    cp "$basename.exe" "$basename.dll" ../dist/bin/
-    jq -c <"$basename.runtimeconfig.json" >../dist/bin/Compiler.runtimeconfig.json
+    dirname=Compiler/bin/$config/net8.0/
+    rm -f ../dist/bin/*.dll
+    cp "$dirname/Compiler.exe" "$dirname"/*.dll ../dist/bin/
+    jq -c <"$dirname/Compiler.runtimeconfig.json" >../dist/bin/Compiler.runtimeconfig.json
     chmod +x ../dist/bin/Compiler.exe
 ) &
 
@@ -21,7 +22,7 @@ mkdir -p dist/bin dist/obj
     if [ "$config" = Debug ]; then 
         clang_args='-Og -g2'
     else
-        clang_args='-O3 -DNDEBUG'
+        clang_args='-O3 -DNDEBUG -fno-rtti'
     fi
 
     # shellcheck disable=SC2086

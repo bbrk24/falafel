@@ -54,11 +54,13 @@ VarDeclaration
   "var" _+ Identifier:name _* TypeClause:declaredType _* "=" _* Expression:value EOS ->
     return { type: 'VarDeclaration', name, declaredType, value }
 
+# BaseExpression is any expression that is not a BinaryExpression. BinaryExpression is then built
+# in several layers on top of BaseExpression so as to establish a precedence hierarchy.
 BaseExpression
   FunctionCall
-  "(" Expression ")" -> $2
   NumberLiteral
   StringLiteral
+  "(" Expression ")" -> $2
   Identifier ->
     return { type: 'Identifier', name: $1 }
 
@@ -74,13 +76,34 @@ FunctionCall
 
 NumberLiteral
   "-"? "0x" /[0-9a-fA-F]+/ ->
-    return { type: 'NumberLiteral', value: BigInt($0), isDecimal: false }
+    const stringValue = $0.join('');
+    const value = BigInt(stringValue);
+    if (value < -(1n << 31n) || value >= (1n << 31n)) {
+      console.warn(`Integer literal ${stringValue} may be too big to represent on some systems.`);
+    } else if (value < -(1n << 63n) || value >= (1n << 63n)) {
+      throw new RangeError(`Integer literal ${stringValue} is too big!`);
+    }
+    return { type: 'IntegerLiteral', value }
 
-  /-?\d+\.\d+(?:[eE][+\-]\d+)?/ ->
-    return { type: 'NumberLiteral', value: Number($0), isDecimal: true }
+  /-?(\d+\.\d+)(?:[eE]([+\-]\d+))?/ ->
+    const value = Number($0);
+    if (!Number.isFinite(value)) {
+      throw new RangeError(`${$0} is not representable as a Double.`);
+    }
+    if (value === 0.0 && Number($1) != 0.0 && Number($2) < 0) {
+      console.warn(`${$0} is too small and will be rounded to zero.`);
+    }
+
+    return { type: 'DecimalLiteral', value: Number($0) }
 
   /-?\d+/ ->
-    return { type: 'NumberLiteral', value: BigInt($0), isDecimal: false }
+    const value = BigInt($0);
+    if (value < -(1n << 31n) || value >= (1n << 31n)) {
+      console.warn(`Integer literal ${$0} may be too big to represent on some systems.`);
+    } else if (value < -(1n << 63n) || value >= (1n << 63n)) {
+      throw new RangeError(`Integer literal ${$0} is too big!`);
+    }
+    return { type: 'IntegerLiteral', value }
 
 StringLiteral
   /"(?:[^\\"\n]|\\(?:[\\"nrt]|u[0-9a-fA-F]{4}))*"/ ->
