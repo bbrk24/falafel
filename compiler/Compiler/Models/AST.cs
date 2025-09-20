@@ -10,7 +10,10 @@ public interface AstNode
 }
 
 [JsonConverter(typeof(AstJsonConverter))]
-public interface Declaration : AstNode { }
+public interface Declaration : AstNode
+{
+    string Name { get; set; }
+}
 
 public class ClassDefinition : Declaration
 {
@@ -24,8 +27,14 @@ public class VarDeclaration : Declaration
 {
     public string Type { get; set; }
     public string Name { get; set; }
-    public string DeclaredType { get; set; }
+    public AstType DeclaredType { get; set; }
     public Expression Value { get; set; }
+}
+
+public class AstType
+{
+    public string Name { get; set; }
+    public IEnumerable<AstType> Arguments { get; set; }
 }
 
 [JsonConverter(typeof(AstJsonConverter))]

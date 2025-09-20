@@ -27,7 +27,7 @@ Declaration
   VarDeclaration
 
 InheritanceClause
-  ":" _* Identifier -> $3
+  ":" _* Type -> $3
 
 ClassBody
   "{" _* (Declaration _*)* "}" ->
@@ -37,8 +37,18 @@ ClassDefinition
   "class" _+ Identifier:name _* InheritanceClause?:base _* ClassBody:body ->
     return { type: 'ClassDefinition', name, base, body }
 
+Type
+  Identifier ->
+    return { name: $1, arguments: [] }
+  Identifier "<" _* Type:arg0 (_* "," _* Type)*:args _* ","? _* ">" ->
+    const arguments_ = [
+      arg0,
+      ...args.map(el => el[3])
+    ];
+    return { name: $1, arguments: arguments_ };
+
 TypeClause
-  ":" _* Identifier -> $3
+  ":" _* Type -> $3
 
 VarDeclaration
   "var" _+ Identifier:name _* TypeClause:declaredType _* "=" _* Expression:value EOS ->

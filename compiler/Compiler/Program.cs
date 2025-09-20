@@ -1,5 +1,7 @@
-﻿using System.Text.Json;
+﻿using System.Collections.Specialized;
+using System.Text.Json;
 using Compiler.Models;
+using Compiler.Util;
 
 var jsonContent = File.ReadAllText(args[0]);
 
@@ -9,23 +11,19 @@ var decoded =
         new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
     ) ?? throw new Exception("Unexpected JSON null");
 
-foreach (var (filename, nodes) in decoded)
+if (decoded.Count > 1)
 {
-    Console.WriteLine("{0}: ", filename);
+    throw new NotImplementedException("Compiling multiple files together is not supported.");
+}
 
-    foreach (var node in nodes)
-    {
-        if (node is FunctionCall callNode)
-        {
-            Console.WriteLine("{0}({1})", callNode.Function, callNode.Arguments.Count());
-        }
-        else
-        {
-            Console.WriteLine(
-                "Node is not a {0}, it is a {1}",
-                typeof(FunctionCall),
-                node.GetType()
-            );
-        }
-    }
+var statements = decoded.Values.Single();
+
+OrderedDictionary declarations;
+try
+{
+    declarations = statements.OfType<Declaration>().ToOrderedDictionary(d => d.Name, d => d);
+}
+catch (ArgumentException e)
+{
+    throw new Exception("Duplicate declaration detected", e);
 }

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cmath>
+
 #include "runtime/panic.hh"
 #include "runtime/refcount.hh"
 #include "runtime/cow.hh"

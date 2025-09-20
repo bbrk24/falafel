@@ -6,12 +6,12 @@ namespace Compiler.Util;
 
 public class AstJsonConverter : JsonConverter<AstNode>
 {
-    public override bool CanConvert(Type typeToConvert) =>
+    public override bool CanConvert(System.Type typeToConvert) =>
         typeof(AstNode).IsAssignableFrom(typeToConvert);
 
     public override AstNode? Read(
         ref Utf8JsonReader reader,
-        Type typeToConvert,
+        System.Type typeToConvert,
         JsonSerializerOptions options
     )
     {
@@ -21,7 +21,7 @@ public class AstJsonConverter : JsonConverter<AstNode>
         var typeElement = element.GetProperty("type");
         var typeString = typeElement.GetString()!;
 
-        var actualType = Type.GetType($"Compiler.Models.{typeString}");
+        var actualType = System.Type.GetType($"Compiler.Models.{typeString}");
         if (
             actualType is null
             || actualType.IsAbstract

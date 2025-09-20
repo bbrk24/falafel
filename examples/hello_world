@@ -1,1 +1,2 @@
-print("Hello, World!")
+var x: Int = 1
+var x: Int = 2
