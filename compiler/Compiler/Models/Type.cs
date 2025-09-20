@@ -4,6 +4,7 @@ public abstract class Type
 {
     public string Name { get; set; }
     public abstract bool IsInheritable { get; set; }
+    public abstract bool IsObject { get; set; }
 
     public override string ToString() => Name;
 }
@@ -15,6 +16,12 @@ public class GenericPlaceholder : Type
         get => false;
         set => throw new NotSupportedException();
     }
+
+    public override bool IsObject
+    {
+        get => throw new NotImplementedException();
+        set => throw new NotSupportedException();
+    }
 }
 
 public class ConcreteType : Type
@@ -24,7 +31,7 @@ public class ConcreteType : Type
     public Type? BaseType { get; set; }
 
     private bool _isObject;
-    public bool IsObject
+    public override bool IsObject
     {
         get => _isObject;
         set

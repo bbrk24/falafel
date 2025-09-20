@@ -180,5 +180,15 @@ public static class BuiltIns
             IsCppOperator = true,
             CppName = "pow",
         },
+        new Operator
+        {
+            Name = "+",
+            Fixity = OperatorFixity.Infix,
+            LhsType = String,
+            RhsType = String,
+            ReturnType = String,
+            IsCppOperator = true,
+            CppName = "->add",
+        },
     ];
 }

@@ -12,6 +12,14 @@ enum class Encoding : uint_least8_t {
 };
 
 class String final : public Object {
+private:
+    struct Flags {
+        Encoding encoding : 2;
+        bool is_small : 1;
+        bool is_immortal : 1;
+    };
+
+    static constexpr size_t MAX_SHORT_STRING_LEN = (2U * max(sizeof (char8_t*), sizeof (char16_t*)) - sizeof (Flags)) / sizeof (char8_t);
 public:
     inline static String* allocate_immortal_ascii(const char8_t* literal) {
         size_t length = 0U;
@@ -24,7 +32,6 @@ public:
             Flags { .encoding = Encoding::ascii, .is_small = false, .is_immortal = true },
             Data { .char8_literal = literal },
             length,
-            length + 1U,
             ImmortalMarker{}
         );
     }
@@ -39,7 +46,6 @@ public:
             Flags { .encoding = Encoding::utf8, .is_small = false, .is_immortal = true },
             Data { .char8_literal = literal },
             length,
-            length + 1U,
             ImmortalMarker{}
         );
     }
@@ -54,20 +60,19 @@ public:
             Flags { .encoding = Encoding::utf16, .is_small = false, .is_immortal = true },
             Data { .char16_literal = literal },
             length,
-            length + 1U,
             ImmortalMarker{}
         );
         assert(str->m_flags.encoding == Encoding::utf16);
         return str;
     }
 
-    inline static RcPointer<String> allocate_small_utf8(const char8_t* literal) {
+    inline static String* allocate_small_utf8(const char8_t* literal) {
         Data data;
 
         size_t length = 0U;
         while (literal[length]) {
             ++length;
-            assert(length < (sizeof data.short_string) / sizeof (char8_t));
+            assert(length < MAX_SHORT_STRING_LEN);
         }
 
         memcpy(
@@ -77,21 +82,21 @@ public:
         );
 
         return new String(
-            Flags { .encoding = Encoding::utf8, .is_small = true, .is_immortal = false },
+            Flags { .encoding = Encoding::utf8, .is_small = true, .is_immortal = true },
             data,
             length,
-            (sizeof data.short_string) / sizeof (char8_t)
+            ImmortalMarker{}
         );
     }
 
-    inline static RcPointer<String> allocate_small_ascii(const char8_t* literal) {
+    inline static String* allocate_small_ascii(const char8_t* literal) {
         Data data;
 
         size_t length = 0U;
         while (literal[length]) {
             assert(literal[length] <= 0x7F);
             ++length;
-            assert(length < (sizeof data.short_string) / sizeof (char8_t));
+            assert(length < MAX_SHORT_STRING_LEN);
         }
 
         memcpy(
@@ -101,11 +106,21 @@ public:
         );
 
         return new String(
-            Flags { .encoding = Encoding::ascii, .is_small = true, .is_immortal = false },
+            Flags { .encoding = Encoding::ascii, .is_small = true, .is_immortal = true },
             data,
             length,
-            (sizeof data.short_string) / sizeof (char8_t)
+            ImmortalMarker{}
         );
+    }
+
+    RcPointer<String> add(const String* other) const;
+
+    constexpr size_t byte_length() const noexcept {
+        if (m_flags.encoding == Encoding::utf16) {
+            return m_length * sizeof (char16_t);
+        } else {
+            return m_length * sizeof (char8_t);
+        }
     }
 
     void print();
@@ -114,14 +129,6 @@ public:
 protected:
     virtual void visit_children(std::function<void(Object*)> visitor) override;
 private:
-    struct Flags {
-        Encoding encoding : 2;
-        bool is_small : 1;
-        bool is_immortal : 1;
-    };
-
-    static constexpr size_t MAX_SHORT_STRING_LEN = 2U * max(sizeof(char8_t*), sizeof(char16_t*)) - sizeof(Flags);
-
     union Data {
         char8_t* char8_ptr;
         char16_t* char16_ptr;
@@ -130,13 +137,12 @@ private:
         char8_t short_string[MAX_SHORT_STRING_LEN];
     };
 
-    constexpr String(Flags flags, Data data, size_t length, size_t capacity) noexcept : Object(), m_flags(flags), m_data(data), m_length(length), m_capacity(capacity) {}
-    constexpr String(Flags flags, Data data, size_t length, size_t capacity, ImmortalMarker im) noexcept : Object(im), m_flags(flags), m_data(data), m_length(length), m_capacity(capacity) {}
+    constexpr String(Flags flags, Data data, size_t length) noexcept : Object(), m_flags(flags), m_data(data), m_length(length) {}
+    constexpr String(Flags flags, Data data, size_t length, ImmortalMarker im) noexcept : Object(im), m_flags(flags), m_data(data), m_length(length) {}
 
     Flags m_flags;
     Data m_data;
     size_t m_length;
-    size_t m_capacity;
 };
 
 inline void print(String* strPointer) {

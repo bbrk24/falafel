@@ -7,6 +7,7 @@ namespace Compiler.Util;
 
 public class Codegen
 {
+    private const int MaxShortStringLength = 7;
     private static readonly NumberFormatInfo NumberFormatter = new();
     private static readonly IReadOnlyDictionary<char, string> SpecialEscapeSequences =
         new Dictionary<char, string>
@@ -55,7 +56,8 @@ public class Codegen
             }
             else if (node is TypeCheckedVar v)
             {
-                _mainStatements += $"{v.Type} {v.Name} = {TranslateExpression(v.Value)};";
+                var typeString = v.Type.IsObject ? $"RcPointer<{v.Type}>" : v.Type.ToString();
+                _mainStatements += $"{typeString} {v.Name} = {TranslateExpression(v.Value)};";
             }
             else if (node is TypeCheckedExpression expr)
             {
@@ -74,7 +76,7 @@ public class Codegen
             if (str.All(c => c <= '\x7f'))
             {
                 var escaped = EscapeLiteralAscii(str);
-                if (str.Length < 15)
+                if (str.Length < MaxShortStringLength)
                 {
                     strAllocation = $"String::allocate_small_ascii(u8\"{escaped}\")";
                 }
@@ -88,10 +90,10 @@ public class Codegen
                 var utf16Length = Encoding.Unicode.GetByteCount(str);
                 var utf8Length = Encoding.UTF8.GetByteCount(str);
 
-                if (utf8Length < 15 || utf8Length <= utf16Length)
+                if (utf8Length < MaxShortStringLength || utf8Length <= utf16Length)
                 {
                     var escaped = EscapeLiteralUtf8(str);
-                    if (utf8Length < 15)
+                    if (utf8Length < MaxShortStringLength)
                     {
                         strAllocation = $"String::allocate_small_utf8(u8\"{escaped}\")";
                     }
