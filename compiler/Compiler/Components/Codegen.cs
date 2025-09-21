@@ -37,11 +37,17 @@ public class Codegen
     );
     private static readonly byte[] MainExit = Encoding.UTF8.GetBytes("return 0;}");
 
-    private HashSet<string> _stringLiterals = [];
+    private readonly HashSet<string> _stringLiterals = [];
     private string _beforeMainDecls = "";
-    private string _mainStatements = "";
+    private readonly StringBuilder _mainStatements = new();
     private string _afterMainDecls = "";
     private int _stringBuilderCount = 0;
+    private StringBuilder _currentBlock;
+
+    public Codegen()
+    {
+        _currentBlock = _mainStatements;
+    }
 
     public void GenerateCode(IEnumerable<TypeCheckedStatement> program, string? location)
     {
@@ -49,28 +55,7 @@ public class Codegen
             ? new FileStream(new SafeFileHandle(1, false), FileAccess.Write)
             : new FileStream(location, FileMode.Create);
 
-        foreach (var node in program)
-        {
-            if (node is TypeCheckedClass)
-            {
-                throw new NotImplementedException();
-            }
-            else if (node is TypeCheckedVar v)
-            {
-                var typeString = v.Type.IsObject ? $"RcPointer<{v.Type}>" : v.Type.ToString();
-                var statement = $"{typeString} {v.Name} = {TranslateExpression(v.Value)};";
-                _mainStatements += statement;
-            }
-            else if (node is TypeCheckedExpression expr)
-            {
-                var statement = TranslateExpression(expr) + ";";
-                _mainStatements += statement;
-            }
-            else
-            {
-                throw new ArgumentException($"Invalid type {node.GetType()}", nameof(program));
-            }
-        }
+        GenerateCodeWithoutWriting(program);
 
         foreach (var str in _stringLiterals)
         {
@@ -91,6 +76,86 @@ public class Codegen
         }
 
         EmitCode(stream);
+    }
+
+    private void GenerateCodeWithoutWriting(IEnumerable<TypeCheckedStatement> program)
+    {
+        foreach (var node in program)
+        {
+            if (node is TypeCheckedClass)
+            {
+                throw new NotImplementedException();
+            }
+            else if (node is TypeCheckedVar v)
+            {
+                var typeString = v.Type.IsObject ? $"RcPointer<{v.Type}>" : v.Type.ToString();
+                var statement = $"{typeString} {v.Name} = {TranslateExpression(v.Value)};";
+                _currentBlock.Append(statement);
+            }
+            else if (node is TypeCheckedAssignment a)
+            {
+                var statement = $"{a.Name} = {TranslateExpression(a.Value)};";
+                _currentBlock.Append(statement);
+            }
+            else if (node is TypeCheckedConditional c)
+            {
+                var condition = TranslateExpression(c.Condition);
+
+                var oldBlock = _currentBlock;
+                var newBlock = new StringBuilder();
+
+                oldBlock.Append("if (");
+                oldBlock.Append(condition);
+                oldBlock.Append(") {");
+
+                _currentBlock = newBlock;
+
+                GenerateCodeWithoutWriting(c.TrueBlock);
+
+                if (c.FalseBlock.Any())
+                {
+                    oldBlock.Append(newBlock);
+                    oldBlock.Append("} else {");
+
+                    newBlock = new StringBuilder();
+                    _currentBlock = newBlock;
+
+                    GenerateCodeWithoutWriting(c.FalseBlock);
+                }
+
+                _currentBlock = oldBlock;
+                oldBlock.Append(newBlock);
+                oldBlock.Append("}");
+            }
+            else if (node is TypeCheckedLoop l)
+            {
+                var condition = TranslateExpression(l.Condition);
+
+                var oldBlock = _currentBlock;
+                var newBlock = new StringBuilder();
+
+                oldBlock.Append("while (");
+                oldBlock.Append(condition);
+                oldBlock.Append(") {");
+
+                _currentBlock = newBlock;
+
+                GenerateCodeWithoutWriting(l.Body);
+
+                _currentBlock = oldBlock;
+                oldBlock.Append(newBlock);
+                oldBlock.Append("}");
+            }
+            else if (node is TypeCheckedExpression expr)
+            {
+                var statement = TranslateExpression(expr) + ";";
+                _currentBlock.Append(statement);
+            }
+            else
+            {
+                throw new ArgumentException($"Invalid type {node.GetType()}", nameof(program));
+            }
+        }
     }
 
     private string TranslateExpression(TypeCheckedExpression expr)
@@ -157,11 +222,11 @@ public class Codegen
             var sbNum = _stringBuilderCount;
             ++_stringBuilderCount;
 
-            _mainStatements += $"StringBuilder sb{sbNum}({si.Pieces.Count()});";
+            _currentBlock.Append($"StringBuilder sb{sbNum}({si.Pieces.Count()});");
             foreach (var piece in si.Pieces)
             {
                 var statement = $"sb{sbNum}.add_piece({TranslateExpression(piece)});";
-                _mainStatements += statement;
+                _currentBlock.Append(statement);
             }
 
             return $"sb{sbNum}.build()";
@@ -188,7 +253,7 @@ public class Codegen
 
         stream.Write(MainEntry, 0, MainEntry.Length);
 
-        var mainBytes = Encoding.UTF8.GetBytes(_mainStatements);
+        var mainBytes = Encoding.UTF8.GetBytes(_mainStatements.ToString());
         if (mainBytes.Length > 0)
         {
             stream.Write(mainBytes, 0, mainBytes.Length);

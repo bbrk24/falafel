@@ -1,0 +1,17 @@
+var p: Int = 2
+while (p <= 100) {
+    var i: Int = 2
+    var isPrime: Bool = true
+    while (i < p) {
+        if (p % i == 0) {
+            isPrime = false
+        }
+        i = i + 1
+    }
+
+    if (isPrime) {
+        print(`${p} is prime`)
+    }
+
+    p = p + 1
+}

@@ -15,6 +15,25 @@ public class TypeCheckedVar : TypeCheckedStatement
     public TypeCheckedExpression Value { get; set; }
 }
 
+public class TypeCheckedAssignment : TypeCheckedStatement
+{
+    public string Name { get; set; }
+    public TypeCheckedExpression Value { get; set; }
+}
+
+public class TypeCheckedConditional : TypeCheckedStatement
+{
+    public TypeCheckedExpression Condition { get; set; }
+    public IEnumerable<TypeCheckedStatement> TrueBlock { get; set; }
+    public IEnumerable<TypeCheckedStatement> FalseBlock { get; set; }
+}
+
+public class TypeCheckedLoop : TypeCheckedStatement
+{
+    public TypeCheckedExpression Condition { get; set; }
+    public IEnumerable<TypeCheckedStatement> Body { get; set; }
+}
+
 public interface TypeCheckedExpression : TypeCheckedStatement { }
 
 public class TypedIntegerLiteral : TypeCheckedExpression
@@ -57,6 +76,7 @@ public class TypeCheckedOperatorCall : TypeCheckedExpression
     public TypeCheckedExpression? Rhs { get; set; }
 }
 
-public class TypeCheckedBooleanLiteral : TypeCheckedExpression {
+public class TypeCheckedBooleanLiteral : TypeCheckedExpression
+{
     public bool Value { get; set; }
 }

@@ -7,7 +7,7 @@ public static class BuiltIns
     public static readonly ConcreteType Int = new() { Name = "Int", IsObject = false };
     public static readonly ConcreteType Double = new() { Name = "Double", IsObject = false };
     public static readonly ConcreteType Float = new() { Name = "Float", IsObject = false };
-    public static readonly ConcreteType Bool = new () { Name = "Bool", IsObject = false };
+    public static readonly ConcreteType Bool = new() { Name = "Bool", IsObject = false };
 
     public static readonly ConcreteType String = new()
     {
@@ -214,7 +214,7 @@ public static class BuiltIns
             RhsType = Bool,
             ReturnType = Bool,
             IsCppOperator = true,
-            CppName = "&&"
+            CppName = "&&",
         },
         new Operator
         {
@@ -224,7 +224,7 @@ public static class BuiltIns
             RhsType = Bool,
             ReturnType = Bool,
             IsCppOperator = true,
-            CppName = "||"
+            CppName = "||",
         },
         new Operator
         {
@@ -234,7 +234,7 @@ public static class BuiltIns
             RhsType = Int,
             ReturnType = Bool,
             IsCppOperator = true,
-            CppName = "<"
+            CppName = "<",
         },
         new Operator
         {
@@ -244,7 +244,7 @@ public static class BuiltIns
             RhsType = Float,
             ReturnType = Bool,
             IsCppOperator = true,
-            CppName = "<"
+            CppName = "<",
         },
         new Operator
         {
@@ -254,7 +254,7 @@ public static class BuiltIns
             RhsType = Double,
             ReturnType = Bool,
             IsCppOperator = true,
-            CppName = "<"
+            CppName = "<",
         },
         new Operator
         {
@@ -264,7 +264,7 @@ public static class BuiltIns
             RhsType = Int,
             ReturnType = Bool,
             IsCppOperator = true,
-            CppName = "<="
+            CppName = "<=",
         },
         new Operator
         {
@@ -274,7 +274,7 @@ public static class BuiltIns
             RhsType = Float,
             ReturnType = Bool,
             IsCppOperator = true,
-            CppName = "<="
+            CppName = "<=",
         },
         new Operator
         {
@@ -284,7 +284,7 @@ public static class BuiltIns
             RhsType = Double,
             ReturnType = Bool,
             IsCppOperator = true,
-            CppName = "<="
+            CppName = "<=",
         },
         new Operator
         {
@@ -294,7 +294,7 @@ public static class BuiltIns
             RhsType = Int,
             ReturnType = Bool,
             IsCppOperator = true,
-            CppName = ">"
+            CppName = ">",
         },
         new Operator
         {
@@ -304,7 +304,7 @@ public static class BuiltIns
             RhsType = Float,
             ReturnType = Bool,
             IsCppOperator = true,
-            CppName = ">"
+            CppName = ">",
         },
         new Operator
         {
@@ -314,7 +314,7 @@ public static class BuiltIns
             RhsType = Double,
             ReturnType = Bool,
             IsCppOperator = true,
-            CppName = ">"
+            CppName = ">",
         },
         new Operator
         {
@@ -324,7 +324,7 @@ public static class BuiltIns
             RhsType = Int,
             ReturnType = Bool,
             IsCppOperator = true,
-            CppName = ">="
+            CppName = ">=",
         },
         new Operator
         {
@@ -334,7 +334,7 @@ public static class BuiltIns
             RhsType = Float,
             ReturnType = Bool,
             IsCppOperator = true,
-            CppName = ">="
+            CppName = ">=",
         },
         new Operator
         {
@@ -344,7 +344,7 @@ public static class BuiltIns
             RhsType = Double,
             ReturnType = Bool,
             IsCppOperator = true,
-            CppName = ">="
+            CppName = ">=",
         },
         new Operator
         {
@@ -354,7 +354,7 @@ public static class BuiltIns
             RhsType = Int,
             ReturnType = Bool,
             IsCppOperator = true,
-            CppName = "=="
+            CppName = "==",
         },
         new Operator
         {
@@ -364,7 +364,7 @@ public static class BuiltIns
             RhsType = Float,
             ReturnType = Bool,
             IsCppOperator = true,
-            CppName = "=="
+            CppName = "==",
         },
         new Operator
         {
@@ -374,7 +374,7 @@ public static class BuiltIns
             RhsType = Double,
             ReturnType = Bool,
             IsCppOperator = true,
-            CppName = "=="
+            CppName = "==",
         },
         new Operator
         {
@@ -384,7 +384,7 @@ public static class BuiltIns
             RhsType = Int,
             ReturnType = Bool,
             IsCppOperator = true,
-            CppName = "!="
+            CppName = "!=",
         },
         new Operator
         {
@@ -394,7 +394,7 @@ public static class BuiltIns
             RhsType = Float,
             ReturnType = Bool,
             IsCppOperator = true,
-            CppName = "!="
+            CppName = "!=",
         },
         new Operator
         {
@@ -404,7 +404,7 @@ public static class BuiltIns
             RhsType = Double,
             ReturnType = Bool,
             IsCppOperator = true,
-            CppName = "!="
+            CppName = "!=",
         },
         new Operator
         {
@@ -413,7 +413,7 @@ public static class BuiltIns
             RhsType = Bool,
             ReturnType = Bool,
             IsCppOperator = true,
-            CppName = "!"
+            CppName = "!",
         },
         new Operator
         {
@@ -422,7 +422,7 @@ public static class BuiltIns
             RhsType = Int,
             ReturnType = Int,
             IsCppOperator = true,
-            CppName = "-"
+            CppName = "-",
         },
         new Operator
         {
@@ -431,7 +431,7 @@ public static class BuiltIns
             RhsType = Float,
             ReturnType = Float,
             IsCppOperator = true,
-            CppName = "-"
+            CppName = "-",
         },
         new Operator
         {
@@ -440,7 +440,17 @@ public static class BuiltIns
             RhsType = Double,
             ReturnType = Double,
             IsCppOperator = true,
-            CppName = "-"
+            CppName = "-",
+        },
+        new Operator
+        {
+            Name = "%",
+            Fixity = OperatorFixity.Infix,
+            LhsType = Int,
+            RhsType = Int,
+            ReturnType = Int,
+            IsCppOperator = true,
+            CppName = "%",
         },
     ];
 

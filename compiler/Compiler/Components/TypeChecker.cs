@@ -44,6 +44,67 @@ public class TypeChecker
                     Value = checkedValue,
                 };
             }
+            else if (node is Assignment a)
+            {
+                var variable =
+                    _knownVariables.LastOrDefault(v => v.Name == a.Name)
+                    ?? throw new Exception($"Unrecognized identifier {a.Name}");
+
+                var value = CheckExpressionType(a.Value, variable.Type);
+
+                yield return new TypeCheckedAssignment { Name = variable.Name, Value = value };
+            }
+            else if (node is ConditionalStatement cs)
+            {
+                if (!cs.TrueBlock.Any())
+                {
+                    Console.Error.WriteLine("Warning: empty if statement");
+                }
+                if (cs.FalseBlock?.Count() == 0)
+                {
+                    Console.Error.WriteLine("Warning: Extraneous else block");
+                }
+
+                if (
+                    cs.TrueBlock.Any(x => x is ClassDefinition)
+                    || (cs.FalseBlock is not null && cs.FalseBlock.Any(x => x is ClassDefinition))
+                )
+                {
+                    throw new Exception("Conditional class definitions are forbidden");
+                }
+
+                var condition = CheckExpressionType(cs.Condition, BuiltIns.Bool);
+                var trueBlock = new TypeChecker(this).CheckTypes(cs.TrueBlock);
+                IEnumerable<TypeCheckedStatement> falseBlock = [];
+                if (cs.FalseBlock is not null)
+                {
+                    falseBlock = new TypeChecker(this).CheckTypes(cs.FalseBlock);
+                }
+
+                yield return new TypeCheckedConditional
+                {
+                    Condition = condition,
+                    TrueBlock = trueBlock,
+                    FalseBlock = falseBlock,
+                };
+            }
+            else if (node is LoopStatement ls)
+            {
+                if (!ls.Body.Any())
+                {
+                    Console.Error.WriteLine("Warning: empty loop");
+                }
+
+                if (ls.Body.Any(x => x is ClassDefinition))
+                {
+                    throw new Exception("Conditional class definitions are forbidden");
+                }
+
+                var condition = CheckExpressionType(ls.Condition, BuiltIns.Bool);
+                var body = new TypeChecker(this).CheckTypes(ls.Body);
+
+                yield return new TypeCheckedLoop { Condition = condition, Body = body };
+            }
             else if (node is Expression e)
             {
                 yield return CheckExpressionType(e, null);
@@ -228,7 +289,7 @@ public class TypeChecker
         else if (expr is Identifier i)
         {
             var variable =
-                _knownVariables.SingleOrDefault(v => v.Name == i.Name)
+                _knownVariables.LastOrDefault(v => v.Name == i.Name)
                 ?? throw new Exception($"Unrecognized identifier {i.Name}");
 
             if (expectedType is not null && variable.Type != expectedType)

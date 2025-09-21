@@ -59,6 +59,8 @@ public:
 
     void visit_children(std::function<void(Object*)> visitor) { visitor(m_buffer); }
 
+    void clear() { m_buffer.clear(); }
+
 private:
     CowBuffer<T> m_buffer;
 };

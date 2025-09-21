@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+String* const String::empty = String::allocate_small_utf8(u8"");
+
 String::~String() noexcept
 {
     if (!m_flags.is_immortal && !m_flags.is_small) {

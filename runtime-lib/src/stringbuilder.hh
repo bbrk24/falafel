@@ -46,7 +46,7 @@ public:
         m_pieces.push(inner.build());
     }
 
-    RcPointer<String> build() const;
+    RcPointer<String> build();
 
     inline void visit_children(std::function<void(Object*)> visitor)
     {

@@ -47,6 +47,8 @@ public:
         );
     }
 
+    static String* const empty;
+
     RcPointer<String> add(const String* other) const;
 
     void print();

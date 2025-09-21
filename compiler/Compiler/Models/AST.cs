@@ -9,6 +9,28 @@ public interface AstNode
     string Type { get; set; }
 }
 
+public class ConditionalStatement : AstNode
+{
+    public string Type { get; set; }
+    public Expression Condition { get; set; }
+    public IEnumerable<AstNode> TrueBlock { get; set; }
+    public IEnumerable<AstNode>? FalseBlock { get; set; }
+}
+
+public class Assignment : AstNode
+{
+    public string Type { get; set; }
+    public string Name { get; set; }
+    public Expression Value { get; set; }
+}
+
+public class LoopStatement : AstNode
+{
+    public string Type { get; set; }
+    public Expression Condition { get; set; }
+    public IEnumerable<AstNode> Body { get; set; }
+}
+
 [JsonConverter(typeof(AstJsonConverter))]
 public interface Declaration : AstNode
 {
@@ -95,15 +117,15 @@ public class Identifier : Expression
     public string Name { get; set; }
 }
 
-public class BooleanLiteral: Expression
+public class BooleanLiteral : Expression
 {
     public string Type { get; set; }
-    public bool Value {get;set;}
+    public bool Value { get; set; }
 }
 
-public class PrefixExpression: Expression
+public class PrefixExpression : Expression
 {
-    public string Type {get;set;}
-    public string Operator { get;set;}
-    public Expression Operand { get;set;}
+    public string Type { get; set; }
+    public string Operator { get; set; }
+    public Expression Operand { get; set; }
 }

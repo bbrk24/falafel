@@ -20,7 +20,27 @@ EOS
 
 Statement
   Declaration
+  Assignment EOS -> $1
   Expression EOS -> $1
+  ConditionalStatement
+  LoopStatement
+
+ConditionalStatement
+  /(?<!\w|\d)if/ _* "(" _* Expression:cond _* ")" _* "{" Statements:body "}" _* ElseClause?:alt ->
+    return { type: 'ConditionalStatement', condition: cond, trueBlock: body, falseBlock: alt };
+
+ElseClause
+  "else" _* "{" Statements "}" -> $4
+  "else" _+ ConditionalStatement ->
+    return [$3]
+
+LoopStatement
+  /(?<!\w|\d)while/ _* "(" _* Expression:cond _* ")" _* "{" Statements:body "}" ->
+    return { type: 'LoopStatement', condition: cond, body }
+
+Assignment
+  Identifier _* "=" _* Expression ->
+    return { type: 'Assignment', name: $1, value: $5 }
 
 Declaration
   ClassDefinition
@@ -139,7 +159,7 @@ PowExpression
     }, tail)
 
 MulExpression
-  PowExpression:first (_* ("*" / "/") _* PowExpression)*:rest ->
+  PowExpression:first (_* ("*" / "/" / "%") _* PowExpression)*:rest ->
     return rest.reduce((acc, curr) => {
       return { type: 'BinaryExpression', lhs: acc, operator: curr[1], rhs: curr[3] }
     }, first)
@@ -151,7 +171,7 @@ AddExpression
     }, first)
 
 ComparisonExpression
-  AddExpression:first (_* (">" / ">=" / "<" / "<=" / "==" / "!=") _* AddExpression)*:rest ->
+  AddExpression:first (_* (">=" / "<=" / "==" / "!=" / ">" / "<") _* AddExpression)*:rest ->
     return rest.reduce((acc, curr) => {
       return { type: 'BinaryExpression', lhs: acc, operator: curr[1], rhs: curr[3] }
     }, first)
