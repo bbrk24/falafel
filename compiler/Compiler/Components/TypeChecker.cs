@@ -240,6 +240,45 @@ public class TypeChecker
 
             return new TypeCheckedIdentifier { Name = i.Name };
         }
+        else if (expr is BooleanLiteral bl)
+        {
+            if (expectedType is not null && expectedType != BuiltIns.Bool)
+            {
+                throw new Exception("Only Bool instances can be represented by boolean literals");
+            }
+
+            return new TypeCheckedBooleanLiteral { Value = bl.Value };
+        }
+        else if (expr is PrefixExpression pe)
+        {
+            var ops = BuiltIns.Operators.Where(op =>
+                op.Fixity == OperatorFixity.Prefix && op.Name == pe.Operator
+            );
+
+            if (expectedType is not null)
+            {
+                ops = ops.Where(op => op.ReturnType == expectedType);
+
+                if (!ops.Any())
+                {
+                    throw new Exception($"Operator {pe.Operator} cannot produce {expectedType}");
+                }
+            }
+
+            return ExpectOneSuccess(
+                ops,
+                (op) =>
+                {
+                    var rhs = CheckExpressionType(pe.Operand, op.RhsType);
+                    return new TypeCheckedOperatorCall
+                    {
+                        Operator = op,
+                        Lhs = null,
+                        Rhs = rhs,
+                    };
+                }
+            );
+        }
         else
         {
             throw new ArgumentException("Unrecognized expression type", nameof(expr));

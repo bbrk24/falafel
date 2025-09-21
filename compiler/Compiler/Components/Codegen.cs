@@ -166,6 +166,10 @@ public class Codegen
 
             return $"sb{sbNum}.build()";
         }
+        else if (expr is TypeCheckedBooleanLiteral bl)
+        {
+            return bl.Value ? "true" : "false";
+        }
         else
         {
             throw new Exception($"COMPILER BUG: Unrecognized type {expr.GetType()}");

@@ -94,3 +94,16 @@ public class Identifier : Expression
     public string Type { get; set; }
     public string Name { get; set; }
 }
+
+public class BooleanLiteral: Expression
+{
+    public string Type { get; set; }
+    public bool Value {get;set;}
+}
+
+public class PrefixExpression: Expression
+{
+    public string Type {get;set;}
+    public string Operator { get;set;}
+    public Expression Operand { get;set;}
+}

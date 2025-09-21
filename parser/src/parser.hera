@@ -3,7 +3,7 @@ Statements
     return $2.map(el => el[0])
 
 Identifier
-  /\w[\w\d]*/
+  /(?<!\w|\d)\w[\w\d]*/
 
 _
   /\s+/
@@ -57,13 +57,27 @@ VarDeclaration
 # BaseExpression is any expression that is not a BinaryExpression. BinaryExpression is then built
 # in several layers on top of BaseExpression so as to establish a precedence hierarchy.
 BaseExpression
+  # Some notes on ordering:
+  # - FunctionCall must come before Identifier
+  # - BooleanLiteral must come before Identifier
+  # - I think FunctionCall must come before paren handling but I haven't proven it
   FunctionCall
+  BooleanLiteral
   StringInterpolation
   NumberLiteral
   StringLiteral
   "(" Expression ")" -> $2
   Identifier ->
     return { type: 'Identifier', name: $1 }
+  PrefixExpression
+
+BooleanLiteral
+  /(?<!\w|\d)(?:true|false)(?!\w|\d)/ ->
+    return { type: 'BooleanLiteral', value: $0 === 'true' }
+
+PrefixExpression
+  ("!" / "-") BaseExpression ->
+    return { type: "PrefixExpression", operator: $1, operand: $2 }
 
 FunctionCall
   Identifier "(" _* ")" ->
@@ -94,7 +108,6 @@ NumberLiteral
     if (value === 0.0 && Number($1) != 0.0 && Number($2) < 0) {
       console.warn(`${$0} is too small and will be rounded to zero.`);
     }
-
     return { type: 'DecimalLiteral', value: Number($0) }
 
   /-?\d+/ ->
@@ -131,8 +144,26 @@ MulExpression
       return { type: 'BinaryExpression', lhs: acc, operator: curr[1], rhs: curr[3] }
     }, first)
 
-Expression
+AddExpression
   MulExpression:first (_* ("+" / "-") _* MulExpression)*:rest ->
+    return rest.reduce((acc, curr) => {
+      return { type: 'BinaryExpression', lhs: acc, operator: curr[1], rhs: curr[3] }
+    }, first)
+
+ComparisonExpression
+  AddExpression:first (_* (">" / ">=" / "<" / "<=" / "==" / "!=") _* AddExpression)*:rest ->
+    return rest.reduce((acc, curr) => {
+      return { type: 'BinaryExpression', lhs: acc, operator: curr[1], rhs: curr[3] }
+    }, first)
+
+AndExpression
+  ComparisonExpression:first (_* "&&" _* ComparisonExpression)*:rest ->
+    return rest.reduce((acc, curr) => {
+      return { type: 'BinaryExpression', lhs: acc, operator: curr[1], rhs: curr[3] }
+    }, first)
+
+Expression
+  AndExpression:first (_* "||" _* AndExpression)*:rest ->
     return rest.reduce((acc, curr) => {
       return { type: 'BinaryExpression', lhs: acc, operator: curr[1], rhs: curr[3] }
     }, first)

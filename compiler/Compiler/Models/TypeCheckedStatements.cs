@@ -56,3 +56,7 @@ public class TypeCheckedOperatorCall : TypeCheckedExpression
     public TypeCheckedExpression? Lhs { get; set; }
     public TypeCheckedExpression? Rhs { get; set; }
 }
+
+public class TypeCheckedBooleanLiteral : TypeCheckedExpression {
+    public bool Value { get; set; }
+}
