@@ -1,5 +1,10 @@
 BasedOnStyle: WebKit
 AlignAfterOpenBracket: BlockIndent
+AllowAllArgumentsOnNextLine: false
+BinPackArguments: false
 BreakConstructorInitializers: AfterColon
+BreakTemplateDeclarations: Yes
+ColumnLimit: 100
+InsertNewlineAtEOF: true
 PenaltyReturnTypeOnItsOwnLine: 219
 SpaceAfterTemplateKeyword: false

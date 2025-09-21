@@ -14,11 +14,7 @@ public:
 
     Array(std::initializer_list<T> list) : m_buffer(list.size())
     {
-        memcpy(
-            m_buffer.base_pointer(),
-            list.begin(),
-            list.size()
-        );
+        memcpy(m_buffer.base_pointer(), list.begin(), list.size());
     }
 
     void push(T&& el)
@@ -45,10 +41,7 @@ public:
         m_buffer.length_mut()--;
     }
 
-    const T& get(size_t index) const
-    {
-        return m_buffer[index];
-    }
+    const T& get(size_t index) const { return m_buffer[index]; }
 
     void set(size_t index, T&& value)
     {
@@ -62,15 +55,9 @@ public:
         m_buffer[index] = value;
     }
 
-    constexpr size_t length() const noexcept
-    {
-        return m_buffer.length();
-    }
+    constexpr size_t length() const noexcept { return m_buffer.length(); }
 
-    void visit_children(std::function<void(Object*)> visitor)
-    {
-        visitor(m_buffer);
-    }
+    void visit_children(std::function<void(Object*)> visitor) { visitor(m_buffer); }
 
 private:
     CowBuffer<T> m_buffer;

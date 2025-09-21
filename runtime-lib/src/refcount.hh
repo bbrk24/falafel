@@ -1,15 +1,12 @@
 #pragma once
 
+#include "panic.hh"
 #include <cstdint>
 #include <cstdlib>
 #include <functional>
 #include <new>
 
-#include "panic.hh"
-
-#ifndef MAX_NUM_ROOTS
-#define MAX_NUM_ROOTS 1024
-#endif
+constexpr size_t MAX_NUM_ROOTS = 1024U;
 
 enum class ObjectColor : uint_least8_t {
     black,
@@ -44,15 +41,15 @@ public:
     void retain() noexcept;
     void release();
 
-    constexpr bool is_unique() const noexcept
-    {
-        return m_refcount < 2U;
-    }
+    constexpr bool is_unique() const noexcept { return m_refcount < 2U; }
 
     static void collect_cycles();
 
     constexpr Object() noexcept : m_refcount(1U), m_color(ObjectColor::black), m_buffered(false) { }
-    constexpr Object(ImmortalMarker) noexcept : m_refcount(UINTPTR_MAX), m_color(ObjectColor::black), m_buffered(false) { }
+    constexpr Object(ImmortalMarker) noexcept :
+        m_refcount(UINTPTR_MAX), m_color(ObjectColor::black), m_buffered(false)
+    {
+    }
     Object(const Object&) = delete;
     virtual ~Object() = default;
 
@@ -86,10 +83,7 @@ public:
         }
     }
 
-    inline RcPointer(RcPointer<T>&& other) : m_obj(other.m_obj)
-    {
-        other.m_obj = nullptr;
-    }
+    inline RcPointer(RcPointer<T>&& other) : m_obj(other.m_obj) { other.m_obj = nullptr; }
 
     inline ~RcPointer()
     {
@@ -120,29 +114,14 @@ public:
         return *this;
     }
 
-    inline void null_without_release() noexcept
-    {
-        m_obj = nullptr;
-    }
+    inline void null_without_release() noexcept { m_obj = nullptr; }
 
-    constexpr T& operator*() const
-    {
-        return *m_obj;
-    }
-    constexpr T* operator->() const noexcept
-    {
-        return m_obj;
-    }
+    constexpr T& operator*() const { return *m_obj; }
+    constexpr T* operator->() const noexcept { return m_obj; }
 
-    constexpr operator T*() noexcept
-    {
-        return m_obj;
-    }
+    constexpr operator T*() noexcept { return m_obj; }
 
-    constexpr operator bool() const noexcept
-    {
-        return m_obj != nullptr;
-    }
+    constexpr operator bool() const noexcept { return m_obj != nullptr; }
 
 private:
     T* m_obj;

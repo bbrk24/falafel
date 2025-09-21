@@ -58,6 +58,7 @@ VarDeclaration
 # in several layers on top of BaseExpression so as to establish a precedence hierarchy.
 BaseExpression
   FunctionCall
+  StringInterpolation
   NumberLiteral
   StringLiteral
   "(" Expression ")" -> $2
@@ -105,9 +106,18 @@ NumberLiteral
     }
     return { type: 'IntegerLiteral', value }
 
+StringInterpolation
+  "`" InterpolationPiece* "`" ->
+    return { type: 'StringInterpolation', pieces: $2 }
+
+InterpolationPiece
+  "${" Expression "}" -> $2
+  /(?:[^\\`\n\$]|\\(?:[\\"`nrt\$]|u[0-9a-fA-F]{4}))*/ ->
+    return { type: 'StringLiteral', value: JSON.parse(`"${$0.replaceAll('\\$', '$').replaceAll('\\`', '`')}"`) }
+
 StringLiteral
-  /"(?:[^\\"\n]|\\(?:[\\"nrt]|u[0-9a-fA-F]{4}))*"/ ->
-    return { type: 'StringLiteral', value: JSON.parse($0) }
+  /"(?:[^\\"\n]|\\(?:[\\"`nrt\$]|u[0-9a-fA-F]{4}))*"/ ->
+    return { type: 'StringLiteral', value: JSON.parse($0.replaceAll('\\$', '$').replaceAll('\\`', '`')) }
 
 PowExpression
   (BaseExpression _* "**" _*)*:head BaseExpression:tail ->

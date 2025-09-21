@@ -75,6 +75,12 @@ public class StringLiteral : Expression
     public string Value { get; set; }
 }
 
+public class StringInterpolation : Expression
+{
+    public string Type { get; set; }
+    public IEnumerable<Expression> Pieces { get; set; }
+}
+
 public class BinaryExpression : Expression
 {
     public string Type { get; set; }

@@ -135,11 +135,6 @@ public class TypeChecker
         }
         else if (expr is DecimalLiteral dl)
         {
-            if (expectedType is null)
-            {
-                throw new Exception("A decimal literal should not be a statement by itself.");
-            }
-
             if (expectedType == BuiltIns.Float)
             {
                 if (Math.Abs(dl.Value) > (double)float.MaxValue)
@@ -147,22 +142,22 @@ public class TypeChecker
                     throw new Exception($"Decimal literal is too large to store as Float");
                 }
             }
-            else if (expectedType != BuiltIns.Double)
+            else if (expectedType is not null && expectedType != BuiltIns.Double)
             {
                 throw new Exception($"{expectedType} cannot be expressed by decimal literal");
             }
 
-            return new TypedDecimalLiteral { Value = dl.Value, Type = expectedType };
+            return new TypedDecimalLiteral
+            {
+                Value = dl.Value,
+                Type = expectedType ?? BuiltIns.Double,
+            };
         }
         else if (expr is IntegerLiteral il)
         {
-            if (expectedType is null)
-            {
-                throw new Exception("An integer literal should not be a statement by itself.");
-            }
-
             if (
-                expectedType != BuiltIns.Int
+                expectedType is not null
+                && expectedType != BuiltIns.Int
                 && expectedType != BuiltIns.Float
                 && expectedType != BuiltIns.Double
             )
@@ -170,11 +165,29 @@ public class TypeChecker
                 throw new Exception($"{expectedType} cannot be expressed by integer literal");
             }
 
-            return new TypedIntegerLiteral { Value = il.Value, Type = expectedType };
+            return new TypedIntegerLiteral
+            {
+                Value = il.Value,
+                Type = expectedType ?? BuiltIns.Int,
+            };
+        }
+        else if (expr is StringInterpolation si)
+        {
+            if (expectedType is not null && expectedType != BuiltIns.String)
+            {
+                throw new Exception(
+                    "Only String instances can be represented by string interpolations"
+                );
+            }
+
+            return new TypeCheckedStringInterpolation
+            {
+                Pieces = si.Pieces.Select(e => CheckExpressionType(e, null)),
+            };
         }
         else if (expr is StringLiteral sl)
         {
-            if (expectedType != BuiltIns.String)
+            if (expectedType is not null && expectedType != BuiltIns.String)
             {
                 throw new Exception("Only String instances can be represented by string literals");
             }

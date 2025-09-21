@@ -24,12 +24,14 @@ private:
         inline void visit_children(std::function<void(Object*)> visitor) final override
         {
             if constexpr (std::is_convertible_v<T, Object*>) {
-                T* base_pointer = reinterpret_cast<T*>(reinterpret_cast<char*>(this) + header_offset());
+                T* base_pointer
+                    = reinterpret_cast<T*>(reinterpret_cast<char*>(this) + header_offset());
                 for (size_t i = 0; i < m_length; ++i) {
                     visitor(base_pointer[i]);
                 }
             } else if constexpr (Visitable<T>) {
-                T* base_pointer = reinterpret_cast<T*>(reinterpret_cast<char*>(this) + header_offset());
+                T* base_pointer
+                    = reinterpret_cast<T*>(reinterpret_cast<char*>(this) + header_offset());
                 for (size_t i = 0; i < m_length; ++i) {
                     base_pointer[i].visit_children(visitor);
                 }
@@ -40,26 +42,22 @@ private:
 public:
     constexpr CowBuffer() noexcept : m_pointer(nullptr), m_capacity(0U) { }
 
-    CowBuffer(size_t capacity) : m_pointer(nullptr)
-    {
-        realloc(capacity);
-    }
+    CowBuffer(size_t capacity) : m_pointer(nullptr) { realloc(capacity); }
 
-    CowBuffer(const CowBuffer<T>& other) noexcept : m_pointer(other.m_pointer), m_capacity(other.m_capacity)
+    CowBuffer(const CowBuffer<T>& other) noexcept :
+        m_pointer(other.m_pointer), m_capacity(other.m_capacity)
     {
         static_cast<Object*>(*this)->retain();
     }
 
-    CowBuffer(CowBuffer<T>&& other) noexcept : m_pointer(other.m_pointer), m_capacity(other.m_capacity)
+    CowBuffer(CowBuffer<T>&& other) noexcept :
+        m_pointer(other.m_pointer), m_capacity(other.m_capacity)
     {
         other.m_capacity = 0U;
         other.m_pointer = nullptr;
     }
 
-    ~CowBuffer()
-    {
-        clear();
-    }
+    ~CowBuffer() { clear(); }
 
     CowBuffer<T>& operator=(const CowBuffer<T>& other)
     {
@@ -107,11 +105,7 @@ public:
             realloc(max(capacity, old_length));
 
             if constexpr (std::is_trivially_copy_constructible_v<T>) {
-                memcpy(
-                    m_pointer,
-                    old_ptr,
-                    old_length
-                );
+                memcpy(m_pointer, old_ptr, old_length);
             } else {
                 T* bptr = reinterpret_cast<T*>(m_pointer);
                 const T* old_bptr = reinterpret_cast<T*>(old_ptr);
@@ -124,10 +118,7 @@ public:
         }
     }
 
-    void ensure_unique()
-    {
-        ensure_unique(length());
-    }
+    void ensure_unique() { ensure_unique(length()); }
 
     void realloc(size_t capacity)
     {
@@ -214,15 +205,9 @@ public:
         }
     }
 
-    T* base_pointer() noexcept
-    {
-        return reinterpret_cast<T*>(m_pointer);
-    }
+    T* base_pointer() noexcept { return reinterpret_cast<T*>(m_pointer); }
 
-    const T* base_pointer() const noexcept
-    {
-        return reinterpret_cast<T*>(m_pointer);
-    }
+    const T* base_pointer() const noexcept { return reinterpret_cast<T*>(m_pointer); }
 
     T* operator+(ptrdiff_t offset)
     {

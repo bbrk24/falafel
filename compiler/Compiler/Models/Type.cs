@@ -26,8 +26,8 @@ public class GenericPlaceholder : Type
 
 public class ConcreteType : Type
 {
-    public Dictionary<string, Property> Properties { get; set; } = [];
-    public Dictionary<string, Method> Methods { get; set; } = [];
+    public ICollection<Property> Properties { get; set; } = [];
+    public ICollection<Method> Methods { get; set; } = [];
     public Type? BaseType { get; set; }
 
     private bool _isObject;

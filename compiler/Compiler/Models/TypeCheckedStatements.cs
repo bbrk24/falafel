@@ -45,6 +45,11 @@ public class TypeCheckedFunctionCall : TypeCheckedExpression
     public IEnumerable<TypeCheckedExpression> Arguments { get; set; }
 }
 
+public class TypeCheckedStringInterpolation : TypeCheckedExpression
+{
+    public IEnumerable<TypeCheckedExpression> Pieces { get; set; }
+}
+
 public class TypeCheckedOperatorCall : TypeCheckedExpression
 {
     public Operator Operator { get; set; }

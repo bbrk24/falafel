@@ -4,6 +4,9 @@ public static class BuiltIns
 {
     public static readonly ConcreteType Object = new() { Name = "Object", IsInheritable = true };
     public static readonly ConcreteType Void = new() { Name = "Void", IsObject = false };
+    public static readonly ConcreteType Int = new() { Name = "Int", IsObject = false };
+    public static readonly ConcreteType Double = new() { Name = "Double", IsObject = false };
+    public static readonly ConcreteType Float = new() { Name = "Float", IsObject = false };
 
     public static readonly ConcreteType String = new()
     {
@@ -11,11 +14,22 @@ public static class BuiltIns
         IsObject = true,
         IsInheritable = false,
         BaseType = Object,
+        Methods =
+        [
+            new()
+            {
+                Name = "length",
+                ArgumentTypes = [],
+                ReturnType = Int,
+            },
+        ],
     };
 
-    public static readonly ConcreteType Int = new() { Name = "Int", IsObject = false };
-    public static readonly ConcreteType Double = new() { Name = "Double", IsObject = false };
-    public static readonly ConcreteType Float = new() { Name = "Float", IsObject = false };
+    public static readonly ConcreteType StringBuilder = new()
+    {
+        Name = "StringBuilder",
+        IsObject = false,
+    };
 
     public static readonly IReadOnlyCollection<Type> Types =
     [
@@ -26,6 +40,7 @@ public static class BuiltIns
         Void,
         Object,
         String,
+        StringBuilder,
     ];
 
     public static readonly IReadOnlyCollection<Method> Methods =
@@ -191,4 +206,12 @@ public static class BuiltIns
             CppName = "->add",
         },
     ];
+
+    static BuiltIns()
+    {
+        foreach (var method in String.Methods)
+        {
+            method.ThisType = String;
+        }
+    }
 }

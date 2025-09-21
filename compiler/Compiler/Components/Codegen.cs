@@ -41,6 +41,7 @@ public class Codegen
     private string _beforeMainDecls = "";
     private string _mainStatements = "";
     private string _afterMainDecls = "";
+    private int _stringBuilderCount = 0;
 
     public void GenerateCode(IEnumerable<TypeCheckedStatement> program, string? location)
     {
@@ -57,11 +58,13 @@ public class Codegen
             else if (node is TypeCheckedVar v)
             {
                 var typeString = v.Type.IsObject ? $"RcPointer<{v.Type}>" : v.Type.ToString();
-                _mainStatements += $"{typeString} {v.Name} = {TranslateExpression(v.Value)};";
+                var statement = $"{typeString} {v.Name} = {TranslateExpression(v.Value)};";
+                _mainStatements += statement;
             }
             else if (node is TypeCheckedExpression expr)
             {
-                _mainStatements += TranslateExpression(expr) + ";";
+                var statement = TranslateExpression(expr) + ";";
+                _mainStatements += statement;
             }
             else
             {
@@ -73,40 +76,15 @@ public class Codegen
         {
             string strAllocation;
 
-            if (str.All(c => c <= '\x7f'))
+            var utf8Length = Encoding.UTF8.GetByteCount(str);
+            var escaped = EscapeLiteralUtf8(str);
+            if (utf8Length < MaxShortStringLength)
             {
-                var escaped = EscapeLiteralAscii(str);
-                if (str.Length < MaxShortStringLength)
-                {
-                    strAllocation = $"String::allocate_small_ascii(u8\"{escaped}\")";
-                }
-                else
-                {
-                    strAllocation = $"String::allocate_immortal_ascii(u8\"{escaped}\")";
-                }
+                strAllocation = $"String::allocate_small_utf8(u8\"{escaped}\")";
             }
             else
             {
-                var utf16Length = Encoding.Unicode.GetByteCount(str);
-                var utf8Length = Encoding.UTF8.GetByteCount(str);
-
-                if (utf8Length < MaxShortStringLength || utf8Length <= utf16Length)
-                {
-                    var escaped = EscapeLiteralUtf8(str);
-                    if (utf8Length < MaxShortStringLength)
-                    {
-                        strAllocation = $"String::allocate_small_utf8(u8\"{escaped}\")";
-                    }
-                    else
-                    {
-                        strAllocation = $"String::allocate_immortal_utf8(u8\"{escaped}\")";
-                    }
-                }
-                else
-                {
-                    strAllocation =
-                        $"String::allocate_immortal_utf16(u\"{EscapeLiteralUtf16(str)}\")";
-                }
+                strAllocation = $"String::allocate_immortal_utf8(u8\"{escaped}\")";
             }
 
             _beforeMainDecls = $"auto {LiteralName(str)} = {strAllocation};{_beforeMainDecls}";
@@ -174,6 +152,20 @@ public class Codegen
                 return $"{o.Operator.CppName}({string.Join(", ", arguments.Select(TranslateExpression))})";
             }
         }
+        else if (expr is TypeCheckedStringInterpolation si)
+        {
+            var sbNum = _stringBuilderCount;
+            ++_stringBuilderCount;
+
+            _mainStatements += $"StringBuilder sb{sbNum}({si.Pieces.Count()});";
+            foreach (var piece in si.Pieces)
+            {
+                var statement = $"sb{sbNum}.add_piece({TranslateExpression(piece)});";
+                _mainStatements += statement;
+            }
+
+            return $"sb{sbNum}.build()";
+        }
         else
         {
             throw new Exception($"COMPILER BUG: Unrecognized type {expr.GetType()}");
@@ -211,21 +203,6 @@ public class Codegen
 
     private static string LiteralName(string s) => $"stringLiteral_{((uint)s.GetHashCode()):X8}";
 
-    private static string EscapeLiteralAscii(string s)
-    {
-        foreach (var (c, replacement) in SpecialEscapeSequences)
-        {
-            s = s.Replace(c.ToString(), replacement);
-        }
-
-        for (var c = '\x01'; c < ' '; ++c)
-        {
-            s = s.Replace(c.ToString(), $"\\x{((int)c):x2}");
-        }
-
-        return s;
-    }
-
     private static string EscapeLiteralUtf8(string s)
     {
         var builder = new StringBuilder(s.Length);
@@ -233,29 +210,6 @@ public class Codegen
         for (var i = 0; i < s.Length; ++i)
         {
             var c = s[i];
-            if (SpecialEscapeSequences.TryGetValue(c, out var escape))
-            {
-                builder.Append(escape);
-            }
-            else if (c < ' ')
-            {
-                builder.Append($"\\x{((int)c):x2}");
-            }
-            else
-            {
-                builder.Append(c);
-            }
-        }
-
-        return builder.ToString();
-    }
-
-    private static string EscapeLiteralUtf16(string s)
-    {
-        var builder = new StringBuilder(s.Length);
-
-        foreach (var c in s)
-        {
             if (SpecialEscapeSequences.TryGetValue(c, out var escape))
             {
                 builder.Append(escape);
