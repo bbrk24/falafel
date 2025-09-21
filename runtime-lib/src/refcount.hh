@@ -1,5 +1,10 @@
 #pragma once
 
+// Reference counting algorithm taken from Concurrent Cycle Collection in Reference Counted Systems
+// (Bacon and Rajan, 2001), with modifications to allow for immortal objects. The actual concurrent
+// part (which involves red and orange nodes) is not implemented as programs are currently always
+// single-threaded.
+
 #include "panic.hh"
 #include <cstdint>
 #include <cstdlib>
