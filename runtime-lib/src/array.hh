@@ -41,15 +41,15 @@ public:
         m_buffer.length_mut()--;
     }
 
-    const T& get(size_t index) const { return m_buffer[index]; }
+    const T& _indexget(size_t index) const { return m_buffer[index]; }
 
-    void set(size_t index, T&& value)
+    void _indexset(size_t index, T&& value)
     {
         m_buffer.ensure_unique();
         m_buffer[index] = std::move(value);
     }
 
-    void set(size_t index, const T& value)
+    void _indexset(size_t index, const T& value)
     {
         m_buffer.ensure_unique();
         m_buffer[index] = value;

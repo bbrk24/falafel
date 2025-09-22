@@ -2,6 +2,7 @@
 
 #include "max.hh"
 #include "refcount.hh"
+#include "typedefs.hh"
 #include <cassert>
 #include <cstring>
 
@@ -51,6 +52,8 @@ public:
 
     RcPointer<String> add(const String* other) const;
 
+    Char _indexget(Int index) const;
+
     void print();
 
     ~String() noexcept;
@@ -80,5 +83,3 @@ private:
     Data m_data;
     size_t m_length;
 };
-
-inline void print(String* strPointer) { strPointer->print(); }

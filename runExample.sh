@@ -17,3 +17,4 @@ if [ $result -ne 0 ]; then
 fi
 
 "./$1"
+rm "$1"

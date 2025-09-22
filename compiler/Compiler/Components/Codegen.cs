@@ -162,18 +162,18 @@ public class Codegen
     {
         if (expr is TypeCheckedFunctionCall fc)
         {
-            return $"{fc.Method.Name}({string.Join(", ", fc.Arguments.Select(TranslateExpression))})";
+            return $"{MangleMethodName(fc.Method.Name, fc.Method.ArgumentTypes)}({string.Join(", ", fc.Arguments.Select(TranslateExpression))})";
         }
         else if (expr is TypedIntegerLiteral il)
         {
             var valueString = il.Value.ToString("R", NumberFormatter);
             if (il.Type == BuiltIns.Float)
             {
-                return valueString + 'f';
+                return valueString + ".0f";
             }
             else if (il.Type == BuiltIns.Double)
             {
-                return "(double)" + valueString;
+                return valueString + ".0";
             }
             else
             {
@@ -183,6 +183,11 @@ public class Codegen
         else if (expr is TypedDecimalLiteral dl)
         {
             var valueString = dl.Value.ToString("g17", NumberFormatter);
+            if (!valueString.Contains('.') && !valueString.Contains('e'))
+            {
+                valueString += ".0";
+            }
+
             if (dl.Type == BuiltIns.Float)
             {
                 return valueString + 'f';
@@ -194,6 +199,11 @@ public class Codegen
         }
         else if (expr is TypeCheckedStringLiteral sl)
         {
+            if (sl.Value == "")
+            {
+                return "String::empty";
+            }
+
             _stringLiterals.Add(sl.Value);
             return LiteralName(sl.Value);
         }
@@ -234,6 +244,12 @@ public class Codegen
         else if (expr is TypeCheckedBooleanLiteral bl)
         {
             return bl.Value ? "true" : "false";
+        }
+        else if (expr is TypeCheckedIndexGet ig)
+        {
+            var base_ = TranslateExpression(ig.Base);
+            var index = TranslateExpression(ig.Index);
+            return $"{base_}{(ig.Base.Type.IsObject ? "->" : ".")}_indexget({index})";
         }
         else
         {
@@ -294,5 +310,17 @@ public class Codegen
         }
 
         return builder.ToString();
+    }
+
+    private static string MangleMethodName(string original, IEnumerable<Models.Type> argumentTypes)
+    {
+        return original
+            + string.Join(
+                "_",
+                argumentTypes
+                    .Select((t, i) => (t, i))
+                    .Where((t) => t.Item1.IsObject)
+                    .Select((t) => t.Item2)
+            );
     }
 }

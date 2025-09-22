@@ -299,7 +299,7 @@ public class TypeChecker
                 );
             }
 
-            return new TypeCheckedIdentifier { Name = i.Name };
+            return new TypeCheckedIdentifier { Name = variable.Name, Type = variable.Type };
         }
         else if (expr is BooleanLiteral bl)
         {
@@ -339,6 +339,40 @@ public class TypeChecker
                     };
                 }
             );
+        }
+        else if (expr is CastExpression ce)
+        {
+            var targetType =
+                LookupType(ce.DeclaredType)
+                ?? throw new Exception($"Unrecognized type {ce.DeclaredType}");
+
+            if (expectedType is not null && targetType != expectedType)
+            {
+                throw new Exception(
+                    $"Cast type {ce.DeclaredType} does not match expected type {expectedType}"
+                );
+            }
+
+            return CheckExpressionType(ce.Value, targetType);
+        }
+        else if (expr is IndexExpression ie)
+        {
+            var base_ = CheckExpressionType(ie.Base, null);
+            if (base_.Type.Subscript is null)
+            {
+                throw new Exception($"Type {base_.Type} has no subscript");
+            }
+
+            if (expectedType is not null && base_.Type.Subscript.ReturnType != expectedType)
+            {
+                throw new Exception(
+                    $"Subscript on {base_.Type} returns {base_.Type.Subscript.ReturnType}, not {expectedType}"
+                );
+            }
+
+            var index = CheckExpressionType(ie.Index, base_.Type.Subscript.IndexType);
+
+            return new TypeCheckedIndexGet { Base = base_, Index = index };
         }
         else
         {

@@ -41,6 +41,9 @@ LoopStatement
 Assignment
   Identifier _* "=" _* Expression ->
     return { type: 'Assignment', name: $1, value: $5 }
+  Identifier:name _* ("+" / "-" / "*" / "/" / "%" / "&&" / "||") "=" _* Expression:rhs ->
+    const value = { type: 'BinaryExpression', lhs: { type: 'Identifier', name }, rhs };
+    return { type: 'Assignment', name, value };
 
 Declaration
   ClassDefinition
@@ -58,14 +61,15 @@ ClassDefinition
     return { type: 'ClassDefinition', name, base, body, final: final != null }
 
 Type
-  Identifier ->
-    return { name: $1, arguments: [] }
   Identifier "<" _* Type:arg0 (_* "," _* Type)*:args _* ","? _* ">" ->
     const arguments_ = [
       arg0,
       ...args.map(el => el[3])
     ];
     return { name: $1, arguments: arguments_ };
+  Identifier ->
+    return { name: $1, arguments: [] }
+  "(" _* Type _* ")" -> $3
 
 TypeClause
   ":" _* Type -> $3
@@ -74,8 +78,9 @@ VarDeclaration
   "var" _+ Identifier:name _* TypeClause:declaredType _* "=" _* Expression:value EOS ->
     return { type: 'VarDeclaration', name, declaredType, value }
 
-# BaseExpression is any expression that is not a BinaryExpression. BinaryExpression is then built
-# in several layers on top of BaseExpression so as to establish a precedence hierarchy.
+# BaseExpression is any expression that is not a BinaryExpression or MemberAccessExpression.
+# BinaryExpression is then built in several layers on top of BaseExpression so as to establish
+# a precedence hierarchy.
 BaseExpression
   # Some notes on ordering:
   # - FunctionCall must come before Identifier
@@ -86,7 +91,7 @@ BaseExpression
   StringInterpolation
   NumberLiteral
   StringLiteral
-  "(" Expression ")" -> $2
+  "(" _* Expression _* ")" -> $3
   Identifier ->
     return { type: 'Identifier', name: $1 }
   PrefixExpression
@@ -152,8 +157,20 @@ StringLiteral
   /"(?:[^\\"\n]|\\(?:[\\"`nrt\$]|u[0-9a-fA-F]{4}))*"/ ->
     return { type: 'StringLiteral', value: JSON.parse($0.replaceAll('\\$', '$').replaceAll('\\`', '`')) }
 
+MemberAccessExpression
+  BaseExpression:first (("." _* (FunctionCall / Identifier)) / (_* "[" _* Expression _* "]") / (_* "@" _* Type))*:rest ->
+    return rest.reduce((acc, curr) => {
+      if (curr[0] === '.') {
+        return { type: 'MemberAccessExpression', base: acc, member: curr[2] };
+      } else if (curr[1] === '@') {
+        return { type: 'CastExpression', value: acc, declaredType: curr[3] };
+      } else {
+        return { type: 'IndexExpression', base: acc, index: curr[3] }; 
+      }
+    }, first);
+
 PowExpression
-  (BaseExpression _* "**" _*)*:head BaseExpression:tail ->
+  (MemberAccessExpression _* "**" _*)*:head MemberAccessExpression:tail ->
     return head.reduceRight((acc, curr) => {
       return { type: 'BinaryExpression', lhs: curr[0], operator: "**", rhs: acc }
     }, tail)

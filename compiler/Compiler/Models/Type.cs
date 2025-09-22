@@ -5,6 +5,7 @@ public abstract class Type
     public string Name { get; set; }
     public abstract bool IsInheritable { get; set; }
     public abstract bool IsObject { get; set; }
+    public abstract Subscript? Subscript { get; set; }
 
     public override string ToString() => Name;
 }
@@ -22,6 +23,12 @@ public class GenericPlaceholder : Type
         get => throw new NotImplementedException();
         set => throw new NotSupportedException();
     }
+
+    public override Subscript? Subscript
+    {
+        get => throw new NotImplementedException();
+        set => throw new NotSupportedException();
+    }
 }
 
 public class ConcreteType : Type
@@ -29,6 +36,7 @@ public class ConcreteType : Type
     public ICollection<Property> Properties { get; set; } = [];
     public ICollection<Method> Methods { get; set; } = [];
     public Type? BaseType { get; set; }
+    public override Subscript? Subscript { get; set; }
 
     private bool _isObject;
     public override bool IsObject
@@ -84,6 +92,13 @@ public class Method
         }) -> {
             ReturnType
         }";
+}
+
+public class Subscript
+{
+    public Type ReturnType { get; set; }
+    public Type IndexType { get; set; } = BuiltIns.Int;
+    public bool IsSettable { get; set; }
 }
 
 public enum OperatorFixity

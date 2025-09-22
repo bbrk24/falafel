@@ -8,6 +8,7 @@ public static class BuiltIns
     public static readonly ConcreteType Double = new() { Name = "Double", IsObject = false };
     public static readonly ConcreteType Float = new() { Name = "Float", IsObject = false };
     public static readonly ConcreteType Bool = new() { Name = "Bool", IsObject = false };
+    public static readonly ConcreteType Char = new() { Name = "Char", IsObject = false };
 
     public static readonly ConcreteType String = new()
     {
@@ -24,6 +25,7 @@ public static class BuiltIns
                 ReturnType = Int,
             },
         ],
+        Subscript = new() { ReturnType = Char, IsSettable = false },
     };
 
     public static readonly ConcreteType StringBuilder = new()
@@ -193,7 +195,7 @@ public static class BuiltIns
             LhsType = Double,
             RhsType = Double,
             ReturnType = Double,
-            IsCppOperator = true,
+            IsCppOperator = false,
             CppName = "pow",
         },
         new Operator
@@ -451,6 +453,26 @@ public static class BuiltIns
             ReturnType = Int,
             IsCppOperator = true,
             CppName = "%",
+        },
+        new Operator
+        {
+            Name = "==",
+            Fixity = OperatorFixity.Infix,
+            LhsType = Char,
+            RhsType = Char,
+            ReturnType = Char,
+            IsCppOperator = true,
+            CppName = "==",
+        },
+        new Operator
+        {
+            Name = "!=",
+            Fixity = OperatorFixity.Infix,
+            LhsType = Char,
+            RhsType = Char,
+            ReturnType = Char,
+            IsCppOperator = true,
+            CppName = "!=",
         },
     ];
 

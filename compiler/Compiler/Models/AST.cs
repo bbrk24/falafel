@@ -129,3 +129,17 @@ public class PrefixExpression : Expression
     public string Operator { get; set; }
     public Expression Operand { get; set; }
 }
+
+public class CastExpression : Expression
+{
+    public string Type { get; set; }
+    public AstType DeclaredType { get; set; }
+    public Expression Value { get; set; }
+}
+
+public class IndexExpression : Expression
+{
+    public string Type { get; set; }
+    public Expression Base { get; set; }
+    public Expression Index { get; set; }
+}

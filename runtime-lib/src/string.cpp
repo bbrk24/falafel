@@ -1,6 +1,5 @@
 #include "string.hh"
-
-#include <iostream>
+#include <cstdio>
 
 String* const String::empty = String::allocate_small_utf8(u8"");
 
@@ -70,16 +69,26 @@ RcPointer<String> String::add(const String* other) const
     );
 }
 
+Char String::_indexget(Int index) const
+{
+    if (index < 0 || index >= m_length) {
+        panic("Index out of bounds");
+    }
+    if (m_flags.is_small) {
+        return m_data.short_string[index];
+    } else if (m_flags.is_immortal) {
+        return m_data.char8_literal[index];
+    } else {
+        return m_data.char8_ptr[index];
+    }
+}
+
 void String::print()
 {
-    if (m_flags.is_small) {
-        std::cout << reinterpret_cast<const char*>(m_data.short_string);
-    } else if (m_flags.is_immortal) {
-        std::cout << reinterpret_cast<const char*>(m_data.char8_literal);
-    } else {
-        std::cout << reinterpret_cast<const char*>(m_data.char8_ptr);
-    }
-    std::cout << '\n';
+    const char8_t* own_buffer = m_flags.is_small ? m_data.short_string
+        : m_flags.is_immortal                    ? m_data.char8_literal
+                                                 : m_data.char8_ptr;
+    puts(reinterpret_cast<const char*>(own_buffer));
 }
 
 void String::visit_children(std::function<void(Object*)>) { }

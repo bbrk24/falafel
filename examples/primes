@@ -6,12 +6,12 @@ while (p <= 100) {
         if (p % i == 0) {
             isPrime = false
         }
-        i = i + 1
+        i += 1
     }
 
     if (isPrime) {
         print(`${p} is prime`)
     }
 
-    p = p + 1
+    p += 1
 }

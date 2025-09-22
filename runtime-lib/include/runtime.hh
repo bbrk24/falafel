@@ -9,6 +9,8 @@
 #include "runtime/stringbuilder.hh"
 #include "runtime/typedefs.hh"
 
+inline void print0(String* strPointer) { strPointer->print(); }
+
 #pragma clang diagnostic pop
 
 #include <cmath>

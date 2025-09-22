@@ -24,6 +24,7 @@ public:
     void add_piece(Float piece);
     void add_piece(Double piece);
     void add_piece(Bool piece);
+    void add_piece(Char piece);
 
     template<typename T>
     void add_piece(Array<T> piece)
@@ -36,7 +37,7 @@ public:
         StringBuilder inner(piece.length() * 2U + 1U);
         inner.add_piece(open_bracket);
         for (size_t i = 0U; i < piece.length(); ++i) {
-            inner.add_piece(piece.get(i));
+            inner.add_piece(piece._indexget(i));
             if (i != 0U) {
                 inner.add_piece(comma_space);
             }
