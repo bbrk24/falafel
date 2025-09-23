@@ -84,6 +84,8 @@ RcPointer<String> StringBuilder::build()
         offset += piece->m_length;
     }
 
+    result->m_length = length;
+
     m_pieces.clear();
 
     return result;

@@ -107,13 +107,16 @@ public:
             realloc(max(capacity, old_length));
 
             if constexpr (std::is_trivially_copy_constructible_v<T>) {
-                memcpy(m_pointer, old_ptr, old_length);
+                memcpy(m_pointer, old_ptr, old_length * sizeof(T));
             } else {
                 T* bptr = reinterpret_cast<T*>(m_pointer);
                 const T* old_bptr = reinterpret_cast<T*>(old_ptr);
                 for (size_t i = 0; i < old_length; ++i) {
                     new (reinterpret_cast<void*>(bptr + i)) T(old_bptr[i]);
                 }
+            }
+            if (old_length > 0U) {
+                length_mut() = old_length;
             }
 
             obj_ptr->release();
