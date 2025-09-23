@@ -111,3 +111,15 @@ public class TypeCheckedIndexGet : TypeCheckedExpression
         set => throw new NotSupportedException();
     }
 }
+
+public class TypeCheckedCastExpression : TypeCheckedExpression
+{
+    public TypeCheckedExpression Base { get; set; }
+    public Type Type { get; set; }
+}
+
+public class TypeCheckedArrayLiteral : TypeCheckedExpression
+{
+    public IEnumerable<TypeCheckedExpression> Values { get; set; }
+    public Type Type { get; set; }
+}

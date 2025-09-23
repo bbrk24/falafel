@@ -29,18 +29,18 @@ public:
     template<typename T>
     void add_piece(Array<T> piece)
     {
-        if (piece.length() == 0U) {
+        if (piece.length() == 0) {
             m_pieces.push(empty_brackets);
             return;
         }
 
-        StringBuilder inner(piece.length() * 2U + 1U);
+        StringBuilder inner(static_cast<size_t>(piece.length()) * 2U + 1U);
         inner.add_piece(open_bracket);
-        for (size_t i = 0U; i < piece.length(); ++i) {
-            inner.add_piece(piece._indexget(i));
-            if (i != 0U) {
+        for (Int i = 0; i < piece.length(); ++i) {
+            if (i != 0) {
                 inner.add_piece(comma_space);
             }
+            inner.add_piece(piece._indexget(i));
         }
         inner.add_piece(close_bracket);
 

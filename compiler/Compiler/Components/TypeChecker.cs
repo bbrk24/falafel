@@ -165,7 +165,9 @@ public class TypeChecker
 
             if (expectedType is not null)
             {
-                candidateFunctions = candidateFunctions.Where(f => f.ReturnType == expectedType);
+                candidateFunctions = candidateFunctions.Where(f =>
+                    expectedType.IsImplicitlyConvertibleFrom(f.ReturnType)
+                );
 
                 if (!candidateFunctions.Any())
                 {
@@ -218,9 +220,9 @@ public class TypeChecker
         {
             if (
                 expectedType is not null
-                && expectedType != BuiltIns.Int
                 && expectedType != BuiltIns.Float
                 && expectedType != BuiltIns.Double
+                && !expectedType.IsImplicitlyConvertibleFrom(BuiltIns.Int)
             )
             {
                 throw new Exception($"{expectedType} cannot be expressed by integer literal");
@@ -234,7 +236,10 @@ public class TypeChecker
         }
         else if (expr is StringInterpolation si)
         {
-            if (expectedType is not null && expectedType != BuiltIns.String)
+            if (
+                expectedType is not null
+                && !expectedType.IsImplicitlyConvertibleFrom(BuiltIns.String)
+            )
             {
                 throw new Exception(
                     "Only String instances can be represented by string interpolations"
@@ -248,7 +253,10 @@ public class TypeChecker
         }
         else if (expr is StringLiteral sl)
         {
-            if (expectedType is not null && expectedType != BuiltIns.String)
+            if (
+                expectedType is not null
+                && !expectedType.IsImplicitlyConvertibleFrom(BuiltIns.String)
+            )
             {
                 throw new Exception("Only String instances can be represented by string literals");
             }
@@ -263,7 +271,7 @@ public class TypeChecker
 
             if (expectedType is not null)
             {
-                ops = ops.Where(op => op.ReturnType == expectedType);
+                ops = ops.Where(op => expectedType.IsImplicitlyConvertibleFrom(op.ReturnType));
 
                 if (!ops.Any())
                 {
@@ -292,7 +300,10 @@ public class TypeChecker
                 _knownVariables.LastOrDefault(v => v.Name == i.Name)
                 ?? throw new Exception($"Unrecognized identifier {i.Name}");
 
-            if (expectedType is not null && variable.Type != expectedType)
+            if (
+                expectedType is not null
+                && !expectedType.IsImplicitlyConvertibleFrom(variable.Type)
+            )
             {
                 throw new Exception(
                     $"Type mismatch: {variable.Name} is {variable.Type}; expected {expectedType}"
@@ -303,7 +314,10 @@ public class TypeChecker
         }
         else if (expr is BooleanLiteral bl)
         {
-            if (expectedType is not null && expectedType != BuiltIns.Bool)
+            if (
+                expectedType is not null
+                && !expectedType.IsImplicitlyConvertibleFrom(BuiltIns.Bool)
+            )
             {
                 throw new Exception("Only Bool instances can be represented by boolean literals");
             }
@@ -318,7 +332,7 @@ public class TypeChecker
 
             if (expectedType is not null)
             {
-                ops = ops.Where(op => op.ReturnType == expectedType);
+                ops = ops.Where(op => expectedType.IsImplicitlyConvertibleFrom(op.ReturnType));
 
                 if (!ops.Any())
                 {
@@ -346,14 +360,26 @@ public class TypeChecker
                 LookupType(ce.DeclaredType)
                 ?? throw new Exception($"Unrecognized type {ce.DeclaredType}");
 
-            if (expectedType is not null && targetType != expectedType)
+            if (expectedType is not null && expectedType != targetType)
             {
                 throw new Exception(
                     $"Cast type {ce.DeclaredType} does not match expected type {expectedType}"
                 );
             }
 
-            return CheckExpressionType(ce.Value, targetType);
+            try
+            {
+                return CheckExpressionType(ce.Value, targetType);
+            }
+            catch
+            {
+                var untypedResult = CheckExpressionType(ce.Value, null);
+                if (!targetType.IsCastableFrom(untypedResult.Type))
+                {
+                    throw new Exception($"{untypedResult.Type} is not castable to {targetType}");
+                }
+                return new TypeCheckedCastExpression { Base = untypedResult, Type = targetType };
+            }
         }
         else if (expr is IndexExpression ie)
         {
@@ -363,7 +389,10 @@ public class TypeChecker
                 throw new Exception($"Type {base_.Type} has no subscript");
             }
 
-            if (expectedType is not null && base_.Type.Subscript.ReturnType != expectedType)
+            if (
+                expectedType is not null
+                && !expectedType.IsImplicitlyConvertibleFrom(base_.Type.Subscript.ReturnType)
+            )
             {
                 throw new Exception(
                     $"Subscript on {base_.Type} returns {base_.Type.Subscript.ReturnType}, not {expectedType}"
@@ -373,6 +402,25 @@ public class TypeChecker
             var index = CheckExpressionType(ie.Index, base_.Type.Subscript.IndexType);
 
             return new TypeCheckedIndexGet { Base = base_, Index = index };
+        }
+        else if (expr is ArrayLiteral al)
+        {
+            if (expectedType is null)
+            {
+                throw new Exception("Array literals must have an explicit type");
+            }
+            if (expectedType.Name != "Array")
+            {
+                throw new Exception("Only Arrays can be represented by array literals");
+            }
+
+            return new TypeCheckedArrayLiteral
+            {
+                Type = expectedType,
+                Values = al.Values.Select(el =>
+                    CheckExpressionType(el, expectedType.GenericTypes.Single())
+                ),
+            };
         }
         else
         {
@@ -396,7 +444,7 @@ public class TypeChecker
             }
         }
 
-        var thisType = new ConcreteType
+        var thisType = new Models.Type
         {
             Name = cd.Name,
             BaseType = baseType,
@@ -413,12 +461,25 @@ public class TypeChecker
 
     public Models.Type? LookupType(AstType type)
     {
-        if (type.Arguments.Any())
+        var found = _knownTypes.SingleOrDefault(t => t.Name == type.Name);
+        if (found is null)
         {
-            // TODO
             return null;
         }
 
-        return _knownTypes.SingleOrDefault(t => t.Name == type.Name);
+        if (type.Arguments.Any())
+        {
+            return found.Instantiate(
+                type.Arguments.Select(t =>
+                    LookupType(t) ?? throw new Exception($"Unrecognized type {t}")
+                )
+            );
+        }
+        else if (found.GenericTypes.Count > 0)
+        {
+            throw new Exception($"Missing generic type arguments for type {type.Name}");
+        }
+
+        return found;
     }
 }

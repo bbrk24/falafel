@@ -1,10 +1,10 @@
 #pragma once
 
+#include "cow.hh"
+#include "typedefs.hh"
 #include <initializer_list>
 #include <new>
 #include <utility>
-
-#include "cow.hh"
 
 template<typename T>
 struct Array final {
@@ -14,7 +14,8 @@ public:
 
     Array(std::initializer_list<T> list) : m_buffer(list.size())
     {
-        memcpy(m_buffer.base_pointer(), list.begin(), list.size());
+        m_buffer.length_mut() = list.size();
+        memcpy(m_buffer.base_pointer(), list.begin(), list.size() * sizeof(T));
     }
 
     void push(T&& el)
@@ -41,21 +42,33 @@ public:
         m_buffer.length_mut()--;
     }
 
-    const T& _indexget(size_t index) const { return m_buffer[index]; }
-
-    void _indexset(size_t index, T&& value)
+    const T& _indexget(Int index) const
     {
-        m_buffer.ensure_unique();
-        m_buffer[index] = std::move(value);
+        if (index < 0) {
+            panic("Invalid index");
+        }
+        return m_buffer[static_cast<size_t>(index)];
     }
 
-    void _indexset(size_t index, const T& value)
+    void _indexset(Int index, T&& value)
     {
+        if (index < 0) {
+            panic("Invalid index");
+        }
         m_buffer.ensure_unique();
-        m_buffer[index] = value;
+        m_buffer[static_cast<size_t>(index)] = std::move(value);
     }
 
-    constexpr size_t length() const noexcept { return m_buffer.length(); }
+    void _indexset(Int index, const T& value)
+    {
+        if (index < 0) {
+            panic("Invalid index");
+        }
+        m_buffer.ensure_unique();
+        m_buffer[static_cast<size_t>(index)] = value;
+    }
+
+    constexpr Int length() const noexcept { return static_cast<Int>(m_buffer.length()); }
 
     void visit_children(std::function<void(Object*)> visitor) { visitor(m_buffer); }
 

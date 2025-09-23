@@ -143,3 +143,9 @@ public class IndexExpression : Expression
     public Expression Base { get; set; }
     public Expression Index { get; set; }
 }
+
+public class ArrayLiteral : Expression
+{
+    public string Type { get; set; }
+    public IEnumerable<Expression> Values { get; set; }
+}

@@ -51,10 +51,6 @@ public class Codegen
 
     public void GenerateCode(IEnumerable<TypeCheckedStatement> program, string? location)
     {
-        using var stream = location is null
-            ? new FileStream(new SafeFileHandle(1, false), FileAccess.Write)
-            : new FileStream(location, FileMode.Create);
-
         GenerateCodeWithoutWriting(program);
 
         foreach (var str in _stringLiterals)
@@ -75,6 +71,10 @@ public class Codegen
             _beforeMainDecls = $"auto {LiteralName(str)} = {strAllocation};{_beforeMainDecls}";
         }
 
+        using Stream stream = location is null
+            ? Console.OpenStandardOutput()
+            : new FileStream(location, FileMode.Create);
+
         EmitCode(stream);
     }
 
@@ -88,7 +88,7 @@ public class Codegen
             }
             else if (node is TypeCheckedVar v)
             {
-                var typeString = v.Type.IsObject ? $"RcPointer<{v.Type}>" : v.Type.ToString();
+                var typeString = v.Type.IsObject ? $"RcPointer<{v.Type} >" : v.Type.ToString();
                 var statement = $"{typeString} {v.Name} = {TranslateExpression(v.Value)};";
                 _currentBlock.Append(statement);
             }
@@ -232,7 +232,7 @@ public class Codegen
             var sbNum = _stringBuilderCount;
             ++_stringBuilderCount;
 
-            _currentBlock.Append($"StringBuilder sb{sbNum}({si.Pieces.Count()});");
+            _currentBlock.Append($"StringBuilder sb{sbNum}({si.Pieces.Count()}U);");
             foreach (var piece in si.Pieces)
             {
                 var statement = $"sb{sbNum}.add_piece({TranslateExpression(piece)});";
@@ -251,13 +251,28 @@ public class Codegen
             var index = TranslateExpression(ig.Index);
             return $"{base_}{(ig.Base.Type.IsObject ? "->" : ".")}_indexget({index})";
         }
+        else if (expr is TypeCheckedCastExpression cast)
+        {
+            var inner = TranslateExpression(cast.Base);
+            var typeString = cast.Type.IsObject ? $"RcPointer<{cast.Type} >" : cast.Type.ToString();
+            if (cast.Base.Type.IsStrictSuperclassOf(cast.Type))
+            {
+                // Call the `explicit` constructor on RcPointer, which calls dynamic_cast
+                return $"{typeString}{{ {inner} }}";
+            }
+            return $"static_cast<{typeString} >({inner})";
+        }
+        else if (expr is TypeCheckedArrayLiteral al)
+        {
+            return $"{al.Type}({{ {string.Join(", ", al.Values.Select(TranslateExpression))} }})";
+        }
         else
         {
             throw new Exception($"COMPILER BUG: Unrecognized type {expr.GetType()}");
         }
     }
 
-    private void EmitCode(FileStream stream)
+    private void EmitCode(Stream stream)
     {
         stream.Write(Preamble, 0, Preamble.Length);
 

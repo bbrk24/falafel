@@ -81,16 +81,30 @@ public:
     constexpr RcPointer(T* obj) : m_obj(obj) { }
     constexpr RcPointer() : m_obj(nullptr) { }
 
-    inline RcPointer(const RcPointer<T>& other) : m_obj(other.m_obj)
+    RcPointer(const RcPointer<T>& other) : m_obj(other.m_obj)
     {
         if (m_obj != nullptr) {
             m_obj->retain();
         }
     }
 
-    inline RcPointer(RcPointer<T>&& other) : m_obj(other.m_obj) { other.m_obj = nullptr; }
+    RcPointer(RcPointer<T>&& other) : m_obj(other.m_obj) { other.m_obj = nullptr; }
 
-    inline ~RcPointer()
+    template<typename U>
+    explicit RcPointer(const RcPointer<U>& other) : m_obj(dynamic_cast<T*>(other.m_obj))
+    {
+        if (m_obj != nullptr) {
+            m_obj->retain();
+        }
+    }
+
+    template<typename U>
+    explicit RcPointer(RcPointer<U>&& other) : m_obj(dynamic_cast<T*>(other.m_obj))
+    {
+        other.m_obj = nullptr;
+    }
+
+    ~RcPointer()
     {
         if (m_obj != nullptr) {
             m_obj->release();
@@ -98,7 +112,7 @@ public:
         }
     }
 
-    inline RcPointer<T>& operator=(const RcPointer<T>& other)
+    RcPointer<T>& operator=(const RcPointer<T>& other)
     {
         if (m_obj != nullptr) {
             m_obj->release();
@@ -109,7 +123,8 @@ public:
         }
         return *this;
     }
-    inline RcPointer<T>& operator=(RcPointer<T>&& other)
+
+    RcPointer<T>& operator=(RcPointer<T>&& other)
     {
         if (m_obj != nullptr) {
             m_obj->release();
@@ -119,13 +134,12 @@ public:
         return *this;
     }
 
-    inline void null_without_release() noexcept { m_obj = nullptr; }
+    void null_without_release() noexcept { m_obj = nullptr; }
 
     constexpr T& operator*() const { return *m_obj; }
     constexpr T* operator->() const noexcept { return m_obj; }
 
-    constexpr operator T*() noexcept { return m_obj; }
-
+    constexpr operator T*() const noexcept { return m_obj; }
     constexpr operator bool() const noexcept { return m_obj != nullptr; }
 
 private:

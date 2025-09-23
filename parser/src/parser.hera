@@ -41,8 +41,8 @@ LoopStatement
 Assignment
   Identifier _* "=" _* Expression ->
     return { type: 'Assignment', name: $1, value: $5 }
-  Identifier:name _* ("+" / "-" / "*" / "/" / "%" / "&&" / "||") "=" _* Expression:rhs ->
-    const value = { type: 'BinaryExpression', lhs: { type: 'Identifier', name }, rhs };
+  Identifier:name _* ("+" / "-" / "*" / "/" / "%" / "&&" / "||"):operator "=" _* Expression:rhs ->
+    const value = { type: 'BinaryExpression', lhs: { type: 'Identifier', name }, rhs, operator };
     return { type: 'Assignment', name, value };
 
 Declaration
@@ -95,6 +95,7 @@ BaseExpression
   Identifier ->
     return { type: 'Identifier', name: $1 }
   PrefixExpression
+  ArrayLiteral
 
 BooleanLiteral
   /(?<!\w|\d)(?:true|false)(?!\w|\d)/ ->
@@ -156,6 +157,17 @@ InterpolationPiece
 StringLiteral
   /"(?:[^\\"\n]|\\(?:[\\"`nrt\$]|u[0-9a-fA-F]{4}))*"/ ->
     return { type: 'StringLiteral', value: JSON.parse($0.replaceAll('\\$', '$').replaceAll('\\`', '`')) }
+
+ArrayLiteral
+  "[" (_* Expression _* "," _*)*:head (Expression _* ("," _*)?)?:tail "]" ->
+    const values = [];
+    if (head?.length) {
+      values.push(...head.map(el => el[1]));
+    }
+    if (tail?.[0] != null) {
+      values.push(tail[0]);
+    }
+    return { type: 'ArrayLiteral', values };
 
 MemberAccessExpression
   BaseExpression:first (("." _* (FunctionCall / Identifier)) / (_* "[" _* Expression _* "]") / (_* "@" _* Type))*:rest ->

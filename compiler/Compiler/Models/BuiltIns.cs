@@ -2,15 +2,15 @@ namespace Compiler.Models;
 
 public static class BuiltIns
 {
-    public static readonly ConcreteType Object = new() { Name = "Object", IsInheritable = true };
-    public static readonly ConcreteType Void = new() { Name = "Void", IsObject = false };
-    public static readonly ConcreteType Int = new() { Name = "Int", IsObject = false };
-    public static readonly ConcreteType Double = new() { Name = "Double", IsObject = false };
-    public static readonly ConcreteType Float = new() { Name = "Float", IsObject = false };
-    public static readonly ConcreteType Bool = new() { Name = "Bool", IsObject = false };
-    public static readonly ConcreteType Char = new() { Name = "Char", IsObject = false };
+    public static readonly Type Object = new() { Name = "Object", IsInheritable = true };
+    public static readonly Type Void = new() { Name = "Void", IsObject = false };
+    public static readonly Type Int = new() { Name = "Int", IsObject = false };
+    public static readonly Type Double = new() { Name = "Double", IsObject = false };
+    public static readonly Type Float = new() { Name = "Float", IsObject = false };
+    public static readonly Type Bool = new() { Name = "Bool", IsObject = false };
+    public static readonly Type Char = new() { Name = "Char", IsObject = false };
 
-    public static readonly ConcreteType String = new()
+    public static readonly Type String = new()
     {
         Name = "String",
         IsObject = true,
@@ -28,10 +28,37 @@ public static class BuiltIns
         Subscript = new() { ReturnType = Char, IsSettable = false },
     };
 
-    public static readonly ConcreteType StringBuilder = new()
+    public static readonly Type StringBuilder = new() { Name = "StringBuilder", IsObject = false };
+
+    private static readonly Type ArrayGenericPlaceholder = new()
     {
-        Name = "StringBuilder",
+        Name = "T",
+        IsGenericPlaceholder = true,
+    };
+
+    public static readonly Type Array = new()
+    {
+        Name = "Array",
+        GenericTypes = [ArrayGenericPlaceholder],
+        Methods =
+        [
+            new()
+            {
+                Name = "push",
+                ArgumentTypes = [ArrayGenericPlaceholder],
+                ReturnType = Void,
+            },
+            new()
+            {
+                Name = "pop",
+                ArgumentTypes = [],
+                ReturnType = Void,
+            },
+            new() { Name = "clear", ReturnType = Void },
+            new() { Name = "length", ReturnType = Int },
+        ],
         IsObject = false,
+        Subscript = new() { ReturnType = ArrayGenericPlaceholder, IsSettable = true },
     };
 
     public static readonly IReadOnlyCollection<Type> Types =
@@ -44,6 +71,7 @@ public static class BuiltIns
         Object,
         String,
         StringBuilder,
+        Array,
     ];
 
     public static readonly IReadOnlyCollection<Method> Methods =
@@ -481,6 +509,11 @@ public static class BuiltIns
         foreach (var method in String.Methods)
         {
             method.ThisType = String;
+        }
+
+        foreach (var method in Array.Methods)
+        {
+            method.ThisType = Array;
         }
     }
 }

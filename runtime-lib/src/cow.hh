@@ -15,6 +15,8 @@ concept Visitable = requires(T x, std::function<void(Object*)> visitor) {
 template<typename T>
     requires(!std::is_reference_v<T>)
 class CowBuffer final {
+    static_assert(sizeof(char) == 1U);
+
 private:
     class Header final : public Object {
     public:
@@ -125,8 +127,7 @@ public:
         if (capacity < length()) {
             throw std::logic_error("Capacity cannot be less than length");
         }
-
-        size_t total_size = capacity * sizeof(T) + sizeof(Header) + get_padding();
+        size_t total_size = capacity * sizeof(T) + header_offset();
         if (m_pointer == nullptr) {
             if (capacity > 0U) {
                 void* location = malloc(total_size);
