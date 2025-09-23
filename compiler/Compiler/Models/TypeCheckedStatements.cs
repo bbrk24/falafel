@@ -17,8 +17,8 @@ public class TypeCheckedVar : TypeCheckedStatement
 
 public class TypeCheckedAssignment : TypeCheckedStatement
 {
-    public string Name { get; set; }
-    public TypeCheckedExpression Value { get; set; }
+    public TypeCheckedExpression Lhs { get; set; }
+    public TypeCheckedExpression Rhs { get; set; }
 }
 
 public class TypeCheckedConditional : TypeCheckedStatement
@@ -100,10 +100,12 @@ public class TypeCheckedBooleanLiteral : TypeCheckedExpression
     Type TypeCheckedExpression.Type { get; set; } = BuiltIns.Bool;
 }
 
-public class TypeCheckedIndexGet : TypeCheckedExpression
+public class TypeCheckedIndexAccess : TypeCheckedExpression
 {
     public TypeCheckedExpression Base { get; set; }
     public TypeCheckedExpression Index { get; set; }
+
+    public Subscript Subscript => Base.Type.Subscript ?? throw new InvalidOperationException();
 
     Type TypeCheckedExpression.Type
     {
@@ -122,4 +124,40 @@ public class TypeCheckedArrayLiteral : TypeCheckedExpression
 {
     public IEnumerable<TypeCheckedExpression> Values { get; set; }
     public Type Type { get; set; }
+}
+
+public class TypeCheckedPropertyAccess : TypeCheckedExpression
+{
+    public TypeCheckedExpression Base { get; set; }
+    public Property Property { get; set; }
+
+    Type TypeCheckedExpression.Type
+    {
+        get => Property.Type;
+        set => throw new NotSupportedException();
+    }
+}
+
+public class TypeCheckedMethodCall : TypeCheckedExpression
+{
+    public TypeCheckedExpression Base { get; set; }
+    public IEnumerable<TypeCheckedExpression> Arguments { get; set; }
+    public Method Method { get; set; }
+
+    Type TypeCheckedExpression.Type
+    {
+        get => Method.ReturnType;
+        set => throw new NotSupportedException();
+    }
+}
+
+public class TypeCheckedCharLiteral : TypeCheckedExpression
+{
+    public byte Value { get; set; }
+
+    Type TypeCheckedExpression.Type
+    {
+        get => BuiltIns.Char;
+        set => throw new NotSupportedException();
+    }
 }

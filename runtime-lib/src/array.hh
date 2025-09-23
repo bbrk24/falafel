@@ -14,8 +14,10 @@ public:
 
     Array(std::initializer_list<T> list) : m_buffer(list.size())
     {
-        m_buffer.length_mut() = list.size();
-        memcpy(m_buffer.base_pointer(), list.begin(), list.size() * sizeof(T));
+        if (list.size() > 0) {
+            m_buffer.length_mut() = list.size();
+            memcpy(m_buffer.base_pointer(), list.begin(), list.size() * sizeof(T));
+        }
     }
 
     void push(T&& el)

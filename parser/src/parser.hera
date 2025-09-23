@@ -39,11 +39,10 @@ LoopStatement
     return { type: 'LoopStatement', condition: cond, body }
 
 Assignment
-  Identifier _* "=" _* Expression ->
-    return { type: 'Assignment', name: $1, value: $5 }
-  Identifier:name _* ("+" / "-" / "*" / "/" / "%" / "&&" / "||"):operator "=" _* Expression:rhs ->
-    const value = { type: 'BinaryExpression', lhs: { type: 'Identifier', name }, rhs, operator };
-    return { type: 'Assignment', name, value };
+  MemberAccessExpression _* "=" _* Expression ->
+    return { type: 'Assignment', lhs: $1, rhs: $5 }
+  MemberAccessExpression:lhs _* ("+" / "-" / "*" / "/" / "%" / "&&" / "||"):operator "=" _* Expression:rhs ->
+    return { type: 'Assignment', lhs, rhs: { type: 'BinaryExpression', lhs, rhs, operator } }
 
 Declaration
   ClassDefinition
@@ -91,6 +90,7 @@ BaseExpression
   StringInterpolation
   NumberLiteral
   StringLiteral
+  CharLiteral
   "(" _* Expression _* ")" -> $3
   Identifier ->
     return { type: 'Identifier', name: $1 }
@@ -151,12 +151,12 @@ StringInterpolation
 
 InterpolationPiece
   "${" Expression "}" -> $2
-  /(?:[^\\`\n\$]|\\(?:[\\"`nrt\$]|u[0-9a-fA-F]{4}))*/ ->
-    return { type: 'StringLiteral', value: JSON.parse(`"${$0.replaceAll('\\$', '$').replaceAll('\\`', '`')}"`) }
+  /(?:[^\\`\n\$]|\\(?:[\\"`nrt\$']|u[0-9a-fA-F]{4}))*/ ->
+    return { type: 'StringLiteral', value: JSON.parse(`"${$0.replaceAll(/\\(['`\$])/gu, $1)}"`) }
 
 StringLiteral
-  /"(?:[^\\"\n]|\\(?:[\\"`nrt\$]|u[0-9a-fA-F]{4}))*"/ ->
-    return { type: 'StringLiteral', value: JSON.parse($0.replaceAll('\\$', '$').replaceAll('\\`', '`')) }
+  /"(?:[^\\"\n]|\\(?:[\\"`nrt\$']|u[0-9a-fA-F]{4}))*"/ ->
+    return { type: 'StringLiteral', value: JSON.parse($0.replaceAll(/\\(['`\$])/gu, $1)) }
 
 ArrayLiteral
   "[" (_* Expression _* "," _*)*:head (Expression _* ("," _*)?)?:tail "]" ->
@@ -168,6 +168,17 @@ ArrayLiteral
       values.push(tail[0]);
     }
     return { type: 'ArrayLiteral', values };
+
+CharLiteral
+  "'" /[^\\'\n]|\\[\\"`nrt\$']/:char "'" ->
+    let value = char[0];
+    if (value[0] === '\\') {
+      value = JSON.parse(`"${value.replaceAll(/\\(['`\$])/gu, $1)}"`);
+    }
+    if (value.charCodeAt(0) > 0x7f) {
+      throw new SyntaxError(`'${value}' is more than one character`);
+    }
+    return { type: 'CharLiteral', value };
 
 MemberAccessExpression
   BaseExpression:first (("." _* (FunctionCall / Identifier)) / (_* "[" _* Expression _* "]") / (_* "@" _* Type))*:rest ->

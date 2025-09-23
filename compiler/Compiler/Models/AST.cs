@@ -17,11 +17,14 @@ public class ConditionalStatement : AstNode
     public IEnumerable<AstNode>? FalseBlock { get; set; }
 }
 
+[JsonConverter(typeof(AstJsonConverter))]
+public interface AssignmentLhsAllowed : Expression { }
+
 public class Assignment : AstNode
 {
     public string Type { get; set; }
-    public string Name { get; set; }
-    public Expression Value { get; set; }
+    public AssignmentLhsAllowed Lhs { get; set; }
+    public Expression Rhs { get; set; }
 }
 
 public class LoopStatement : AstNode
@@ -72,7 +75,10 @@ public class AstType
 [JsonConverter(typeof(AstJsonConverter))]
 public interface Expression : AstNode { }
 
-public class FunctionCall : Expression
+[JsonConverter(typeof(AstJsonConverter))]
+public interface MemberAccessRhsAllowed : AssignmentLhsAllowed { }
+
+public class FunctionCall : MemberAccessRhsAllowed
 {
     public string Type { get; set; }
     public string Function { get; set; }
@@ -111,7 +117,7 @@ public class BinaryExpression : Expression
     public string Operator { get; set; }
 }
 
-public class Identifier : Expression
+public class Identifier : MemberAccessRhsAllowed
 {
     public string Type { get; set; }
     public string Name { get; set; }
@@ -130,14 +136,14 @@ public class PrefixExpression : Expression
     public Expression Operand { get; set; }
 }
 
-public class CastExpression : Expression
+public class CastExpression : AssignmentLhsAllowed
 {
     public string Type { get; set; }
     public AstType DeclaredType { get; set; }
     public Expression Value { get; set; }
 }
 
-public class IndexExpression : Expression
+public class IndexExpression : AssignmentLhsAllowed
 {
     public string Type { get; set; }
     public Expression Base { get; set; }
@@ -148,4 +154,17 @@ public class ArrayLiteral : Expression
 {
     public string Type { get; set; }
     public IEnumerable<Expression> Values { get; set; }
+}
+
+public class MemberAccessExpression : Expression
+{
+    public string Type { get; set; }
+    public Expression Base { get; set; }
+    public MemberAccessRhsAllowed Member { get; set; }
+}
+
+public class CharLiteral : Expression
+{
+    public string Type { get; set; }
+    public char Value { get; set; }
 }

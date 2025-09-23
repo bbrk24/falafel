@@ -46,13 +46,27 @@ public class TypeChecker
             }
             else if (node is Assignment a)
             {
-                var variable =
-                    _knownVariables.LastOrDefault(v => v.Name == a.Name)
-                    ?? throw new Exception($"Unrecognized identifier {a.Name}");
+                if (a.Lhs is CastExpression)
+                {
+                    throw new Exception(
+                        "The member chain on the left of an assignment cannot end in a cast"
+                    );
+                }
+                var lhs = CheckExpressionType(a.Lhs, null);
+                if (lhs is TypeCheckedMethodCall)
+                {
+                    throw new Exception(
+                        "The member chain on the left of an assignment cannot end in a method call"
+                    );
+                }
+                else if (lhs is TypeCheckedIndexAccess ia && !ia.Subscript.IsSettable)
+                {
+                    throw new Exception($"The subscript on {ia.Base.Type} is not settable");
+                }
 
-                var value = CheckExpressionType(a.Value, variable.Type);
+                var rhs = CheckExpressionType(a.Rhs, lhs.Type);
 
-                yield return new TypeCheckedAssignment { Name = variable.Name, Value = value };
+                yield return new TypeCheckedAssignment { Lhs = lhs, Rhs = rhs };
             }
             else if (node is ConditionalStatement cs)
             {
@@ -401,7 +415,7 @@ public class TypeChecker
 
             var index = CheckExpressionType(ie.Index, base_.Type.Subscript.IndexType);
 
-            return new TypeCheckedIndexGet { Base = base_, Index = index };
+            return new TypeCheckedIndexAccess { Base = base_, Index = index };
         }
         else if (expr is ArrayLiteral al)
         {
@@ -421,6 +435,88 @@ public class TypeChecker
                     CheckExpressionType(el, expectedType.GenericTypes.Single())
                 ),
             };
+        }
+        else if (expr is CharLiteral cl)
+        {
+            if (
+                expectedType is not null
+                && !expectedType.IsImplicitlyConvertibleFrom(BuiltIns.Char)
+            )
+            {
+                throw new Exception("Only Char instances can be represented by character literals");
+            }
+
+            return new TypeCheckedCharLiteral { Value = (byte)cl.Value };
+        }
+        else if (expr is MemberAccessExpression mae)
+        {
+            var base_ = CheckExpressionType(mae.Base, null);
+            if (mae.Member is Identifier i0)
+            {
+                var prop =
+                    base_.Type.Properties.SingleOrDefault(p => p.Name == i0.Name)
+                    ?? throw new Exception($"Type {base_.Type} has no member {i0.Name}");
+
+                if (
+                    expectedType is not null
+                    && !expectedType.IsImplicitlyConvertibleFrom(prop.Type)
+                )
+                {
+                    throw new Exception(
+                        $"{base_.Type}.{prop.Name} is of type {prop.Type} ({expectedType} expected)"
+                    );
+                }
+
+                return new TypeCheckedPropertyAccess { Base = base_, Property = prop };
+            }
+            else if (mae.Member is FunctionCall fc0)
+            {
+                var methods = base_.Type.Methods.Where(m => m.Name == fc0.Function);
+
+                if (!methods.Any())
+                {
+                    throw new Exception($"Type {base_.Type} has no method named {fc0.Function}");
+                }
+
+                if (expectedType is not null)
+                {
+                    methods = methods.Where(m =>
+                        expectedType.IsImplicitlyConvertibleFrom(m.ReturnType)
+                    );
+
+                    if (!methods.Any())
+                    {
+                        throw new Exception(
+                            $"Method {base_.Type}.{fc0.Function} has no overloads that return {expectedType}"
+                        );
+                    }
+                }
+
+                methods = methods.Where(m => m.ArgumentTypes.Count == fc0.Arguments.Count());
+
+                return ExpectOneSuccess(
+                    methods,
+                    m =>
+                    {
+                        var arguments = Enumerable
+                            .Zip(fc0.Arguments, m.ArgumentTypes)
+                            .Select(t => CheckExpressionType(t.Item1, t.Item2));
+                        return new TypeCheckedMethodCall
+                        {
+                            Base = base_,
+                            Method = m,
+                            Arguments = arguments,
+                        };
+                    }
+                );
+            }
+            else
+            {
+                throw new ArgumentException(
+                    $"COMPILER BUG: Unrecognized member access type '{expr.Type}'",
+                    nameof(expr)
+                );
+            }
         }
         else
         {

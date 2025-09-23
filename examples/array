@@ -1,6 +1,6 @@
 var arr: Array<Int> = [1, 2, 3]
 var i: Int = 0
-while (i < 3) {
+while (i < arr.length()) {
     print(`${arr[i]}`)
     i += 1
 }

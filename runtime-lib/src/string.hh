@@ -54,6 +54,8 @@ public:
 
     Char _indexget(Int index) const;
 
+    constexpr Int length() const noexcept { return static_cast<Int>(m_length); }
+
     void print();
 
     ~String() noexcept;

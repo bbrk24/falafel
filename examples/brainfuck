@@ -1,0 +1,40 @@
+var program: String = "++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++."
+var tape: Array<Int> = [0]
+var head: Int = 0
+var i: Int = 0
+var openBracketIndices: Array<Int> = []
+while (i < program.length()) {
+    if (program[i] == '+') {
+        tape[head] += 1
+    } else if (program[i] == '-') {
+        tape[head] -= 1
+    } else if (program[i] == '.') {
+        print(`${tape[head]}`)
+    } else if (program[i] == '>') {
+        head += 1
+        if (head == tape.length()) {
+            tape.push(0);
+        }
+    } else if (program[i] == '<') {
+        head -= 1
+    } else if (program[i] == '[') {
+        if (tape[head] == 0) {
+            var unbalancedBrackets: Int = 0
+            while (unbalancedBrackets >= 0) {
+                i += 1
+                if (program[i] == '[') {
+                    unbalancedBrackets += 1
+                } else if (program[i] == ']') {
+                    unbalancedBrackets -= 1
+                }
+            }
+        } else {
+            openBracketIndices.push(i)
+        }
+    } else if (program[i] == ']') {
+        i = openBracketIndices[openBracketIndices.length() - 1] - 1
+        openBracketIndices.pop()
+    }
+
+    i += 1
+}

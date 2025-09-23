@@ -5,7 +5,7 @@
 
 [[noreturn]] inline void panic(const char* message) noexcept
 {
-    fputs(message, stderr);
+    fprintf(stderr, "%s\n", message);
     fflush(stderr);
     abort();
 }

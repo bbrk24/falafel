@@ -94,7 +94,19 @@ public class Codegen
             }
             else if (node is TypeCheckedAssignment a)
             {
-                var statement = $"{a.Name} = {TranslateExpression(a.Value)};";
+                string statement;
+                if (a.Lhs is TypeCheckedIndexAccess ia)
+                {
+                    var base_ = TranslateExpression(ia.Base);
+                    var index = TranslateExpression(ia.Index);
+                    var rhs = TranslateExpression(a.Rhs);
+                    statement =
+                        $"{base_}{(ia.Base.Type.IsObject ? "->" : ".")}_indexset({index}, {rhs});";
+                }
+                else
+                {
+                    statement = $"{TranslateExpression(a.Lhs)} = {TranslateExpression(a.Rhs)};";
+                }
                 _currentBlock.Append(statement);
             }
             else if (node is TypeCheckedConditional c)
@@ -245,11 +257,11 @@ public class Codegen
         {
             return bl.Value ? "true" : "false";
         }
-        else if (expr is TypeCheckedIndexGet ig)
+        else if (expr is TypeCheckedIndexAccess ia)
         {
-            var base_ = TranslateExpression(ig.Base);
-            var index = TranslateExpression(ig.Index);
-            return $"{base_}{(ig.Base.Type.IsObject ? "->" : ".")}_indexget({index})";
+            var base_ = TranslateExpression(ia.Base);
+            var index = TranslateExpression(ia.Index);
+            return $"{base_}{(ia.Base.Type.IsObject ? "->" : ".")}_indexget({index})";
         }
         else if (expr is TypeCheckedCastExpression cast)
         {
@@ -265,6 +277,28 @@ public class Codegen
         else if (expr is TypeCheckedArrayLiteral al)
         {
             return $"{al.Type}({{ {string.Join(", ", al.Values.Select(TranslateExpression))} }})";
+        }
+        else if (expr is TypeCheckedPropertyAccess pa)
+        {
+            var base_ = TranslateExpression(pa.Base);
+            return $"{base_}{(pa.Base.Type.IsObject ? "->" : ".")}{pa.Property.Name}";
+        }
+        else if (expr is TypeCheckedMethodCall mc)
+        {
+            var base_ = TranslateExpression(mc.Base);
+            return $@"{
+                base_
+            }{
+                (mc.Base.Type.IsObject ? "->" : ".")
+            }{
+                mc.Method.Name
+            }({
+                string.Join(", ", mc.Arguments.Select(TranslateExpression))
+            })";
+        }
+        else if (expr is TypeCheckedCharLiteral cl)
+        {
+            return $@"u8'\x{cl.Value:x2}'";
         }
         else
         {
