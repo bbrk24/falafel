@@ -1,0 +1,3 @@
+var arr: Array<Object> = ["hi"]
+var len: Int = arr[0]@String.length()
+print(`${len}`)

@@ -88,7 +88,7 @@ public class Codegen
             }
             else if (node is TypeCheckedVar v)
             {
-                var typeString = v.Type.IsObject ? $"RcPointer<{v.Type} >" : v.Type.ToString();
+                var typeString = RcPointerWrap(v.Type);
                 var statement = $"{typeString} {v.Name} = {TranslateExpression(v.Value)};";
                 _currentBlock.Append(statement);
             }
@@ -266,7 +266,7 @@ public class Codegen
         else if (expr is TypeCheckedCastExpression cast)
         {
             var inner = TranslateExpression(cast.Base);
-            var typeString = cast.Type.IsObject ? $"RcPointer<{cast.Type} >" : cast.Type.ToString();
+            var typeString = RcPointerWrap(cast.Type);
             if (cast.Base.Type.IsStrictSuperclassOf(cast.Type))
             {
                 // Call the `explicit` constructor on RcPointer, which calls dynamic_cast
@@ -276,7 +276,7 @@ public class Codegen
         }
         else if (expr is TypeCheckedArrayLiteral al)
         {
-            return $"{al.Type}({{ {string.Join(", ", al.Values.Select(TranslateExpression))} }})";
+            return $"{RcPointerWrap(al.Type)}({{ {string.Join(", ", al.Values.Select(TranslateExpression))} }})";
         }
         else if (expr is TypeCheckedPropertyAccess pa)
         {
@@ -371,5 +371,19 @@ public class Codegen
                     .Where((t) => t.Item1.IsObject)
                     .Select((t) => t.Item2)
             );
+    }
+
+    private static string RcPointerWrap(Models.Type t)
+    {
+        var arguments = t.GenericTypes.Select(RcPointerWrap);
+        var fullName = t.GenericTypes.Count > 0 ? $"{t.Name}<{string.Join(", ", arguments)} >" : t.Name;
+        if (t.IsObject)
+        {
+            return $"RcPointer<{fullName} >";
+        }
+        else
+        {
+            return fullName;
+        }
     }
 }

@@ -159,11 +159,11 @@ public class Type : IEquatable<Type>
         {
             return true;
         }
-        if (BaseType is null)
+        if (other.BaseType is null)
         {
             return false;
         }
-        return BaseType.IsImplicitlyConvertibleFrom(other);
+        return IsImplicitlyConvertibleFrom(other.BaseType);
     }
 
     public bool IsCastableFrom(Type other)

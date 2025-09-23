@@ -91,7 +91,7 @@ public:
     RcPointer(RcPointer<T>&& other) : m_obj(other.m_obj) { other.m_obj = nullptr; }
 
     template<typename U>
-    explicit RcPointer(const RcPointer<U>& other) : m_obj(dynamic_cast<T*>(other.m_obj))
+    explicit RcPointer(const RcPointer<U>& other) : m_obj(dynamic_cast<T*>(static_cast<U*>(other)))
     {
         if (m_obj != nullptr) {
             m_obj->retain();
@@ -99,9 +99,9 @@ public:
     }
 
     template<typename U>
-    explicit RcPointer(RcPointer<U>&& other) : m_obj(dynamic_cast<T*>(other.m_obj))
+    explicit RcPointer(RcPointer<U>&& other) : m_obj(dynamic_cast<T*>(static_cast<U*>(other)))
     {
-        other.m_obj = nullptr;
+        other.null_without_release();
     }
 
     ~RcPointer()
