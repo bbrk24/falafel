@@ -7,17 +7,35 @@ public class TypeChecker
     private List<Models.Type> _knownTypes;
     private List<Variable> _knownVariables;
     private List<Method> _knownFunctions = BuiltIns.Methods.ToList();
+    private readonly List<ulong> _lineCounts;
 
-    public TypeChecker()
+    public TypeChecker(List<ulong> lineCounts)
     {
+        _lineCounts = lineCounts;
         _knownTypes = BuiltIns.Types.ToList();
         _knownVariables = [];
     }
 
     public TypeChecker(TypeChecker other)
     {
+        _lineCounts = other._lineCounts;
         _knownTypes = [.. other._knownTypes];
         _knownVariables = [.. other._knownVariables];
+    }
+
+    private int GetLineNumber(Location loc)
+    {
+        var maybeLineNumber = _lineCounts.FindIndex(x => x >= loc.Pos);
+        return maybeLineNumber < 0 ? _lineCounts.Count + 1 : maybeLineNumber + 1;
+    }
+
+    private int? GetLineNumber(HasLocation node)
+    {
+        if (node.Loc is not null)
+        {
+            return GetLineNumber(node.Loc);
+        }
+        return null;
     }
 
     public IEnumerable<TypeCheckedStatement> CheckTypes(IEnumerable<AstNode> program)
@@ -33,7 +51,10 @@ public class TypeChecker
             {
                 var declType =
                     LookupType(vd.DeclaredType)
-                    ?? throw new Exception($"Unrecognized type {vd.DeclaredType}");
+                    ?? throw new TypeCheckException(
+                        $"Unrecognized type {vd.DeclaredType}",
+                        GetLineNumber(vd.DeclaredType)
+                    );
                 var checkedValue = CheckExpressionType(vd.Value, declType);
                 var variable = new Variable { Name = vd.Name, Type = declType };
                 _knownVariables.Add(variable);
@@ -48,20 +69,25 @@ public class TypeChecker
             {
                 if (a.Lhs is CastExpression)
                 {
-                    throw new Exception(
-                        "The member chain on the left of an assignment cannot end in a cast"
+                    throw new TypeCheckException(
+                        "The member chain on the left of an assignment cannot end in a cast",
+                        GetLineNumber(a.Lhs)
                     );
                 }
                 var lhs = CheckExpressionType(a.Lhs, null);
                 if (lhs is TypeCheckedMethodCall)
                 {
-                    throw new Exception(
-                        "The member chain on the left of an assignment cannot end in a method call"
+                    throw new TypeCheckException(
+                        "The member chain on the left of an assignment cannot end in a method call",
+                        GetLineNumber(a.Lhs)
                     );
                 }
                 else if (lhs is TypeCheckedIndexAccess ia && !ia.Subscript.IsSettable)
                 {
-                    throw new Exception($"The subscript on {ia.Base.Type} is not settable");
+                    throw new TypeCheckException(
+                        $"The subscript on {ia.Base.Type} is not settable",
+                        GetLineNumber(a.Lhs)
+                    );
                 }
 
                 var rhs = CheckExpressionType(a.Rhs, lhs.Type);
@@ -111,7 +137,15 @@ public class TypeChecker
 
                 if (ls.Body.Any(x => x is ClassDefinition))
                 {
-                    throw new Exception("Conditional class definitions are forbidden");
+                    var lineNumber = ls
+                        .Body.OfType<ClassDefinition>()
+                        .Select(x => GetLineNumber(x))
+                        .FirstOrDefault(x => x is not null);
+
+                    throw new TypeCheckException(
+                        "Conditional class definitions are forbidden",
+                        lineNumber
+                    );
                 }
 
                 var condition = CheckExpressionType(ls.Condition, BuiltIns.Bool);
@@ -157,7 +191,7 @@ public class TypeChecker
             case 1:
                 return successes[0].Item2;
             default:
-                throw new Exception(
+                throw new TypeCheckException(
                     "Multiple matches found: "
                         + string.Join(", ", successes.Select(s => s.Item1.ToString()))
                 );
@@ -174,7 +208,10 @@ public class TypeChecker
 
             if (!candidateFunctions.Any())
             {
-                throw new Exception($"No known functions match name {fc.Function}");
+                throw new TypeCheckException(
+                    $"No known functions match name {fc.Function}",
+                    GetLineNumber(fc)
+                );
             }
 
             if (expectedType is not null)
@@ -185,7 +222,10 @@ public class TypeChecker
 
                 if (!candidateFunctions.Any())
                 {
-                    throw new Exception($"No overloads of {fc.Function} return {expectedType}");
+                    throw new TypeCheckException(
+                        $"No overloads of {fc.Function} return {expectedType}",
+                        GetLineNumber(fc)
+                    );
                 }
             }
 
@@ -194,8 +234,9 @@ public class TypeChecker
             );
             if (!candidateFunctions.Any())
             {
-                throw new Exception(
-                    $"No overloads of {fc.Function} take {fc.Arguments.Count()} arguments"
+                throw new TypeCheckException(
+                    $"No overloads of {fc.Function} take {fc.Arguments.Count()} arguments",
+                    GetLineNumber(fc)
                 );
             }
 
@@ -216,12 +257,21 @@ public class TypeChecker
             {
                 if (Math.Abs(dl.Value) > (double)float.MaxValue)
                 {
-                    throw new Exception($"Decimal literal is too large to store as Float");
+                    throw new TypeCheckException(
+                        $"Decimal literal is too large to store as Float",
+                        GetLineNumber(dl)
+                    );
                 }
             }
-            else if (expectedType is not null && expectedType != BuiltIns.Double)
+            else if (
+                expectedType is not null
+                && !expectedType.IsImplicitlyConvertibleFrom(BuiltIns.Double)
+            )
             {
-                throw new Exception($"{expectedType} cannot be expressed by decimal literal");
+                throw new TypeCheckException(
+                    $"{expectedType} cannot be expressed by decimal literal",
+                    GetLineNumber(dl)
+                );
             }
 
             return new TypedDecimalLiteral
@@ -239,7 +289,10 @@ public class TypeChecker
                 && !expectedType.IsImplicitlyConvertibleFrom(BuiltIns.Int)
             )
             {
-                throw new Exception($"{expectedType} cannot be expressed by integer literal");
+                throw new TypeCheckException(
+                    $"{expectedType} cannot be expressed by integer literal",
+                    GetLineNumber(il)
+                );
             }
 
             return new TypedIntegerLiteral
@@ -255,8 +308,9 @@ public class TypeChecker
                 && !expectedType.IsImplicitlyConvertibleFrom(BuiltIns.String)
             )
             {
-                throw new Exception(
-                    "Only String instances can be represented by string interpolations"
+                throw new TypeCheckException(
+                    "Only String instances can be represented by string interpolations",
+                    GetLineNumber(si)
                 );
             }
 
@@ -272,7 +326,10 @@ public class TypeChecker
                 && !expectedType.IsImplicitlyConvertibleFrom(BuiltIns.String)
             )
             {
-                throw new Exception("Only String instances can be represented by string literals");
+                throw new TypeCheckException(
+                    "Only String instances can be represented by string literals",
+                    GetLineNumber(sl)
+                );
             }
 
             return new TypeCheckedStringLiteral { Value = sl.Value };
@@ -289,7 +346,10 @@ public class TypeChecker
 
                 if (!ops.Any())
                 {
-                    throw new Exception($"Operator {be.Operator} cannot produce {expectedType}");
+                    throw new TypeCheckException(
+                        $"Operator {be.Operator} cannot produce {expectedType}",
+                        GetLineNumber(be)
+                    );
                 }
             }
 
@@ -312,15 +372,19 @@ public class TypeChecker
         {
             var variable =
                 _knownVariables.LastOrDefault(v => v.Name == i.Name)
-                ?? throw new Exception($"Unrecognized identifier {i.Name}");
+                ?? throw new TypeCheckException(
+                    $"Unrecognized identifier {i.Name}",
+                    GetLineNumber(i)
+                );
 
             if (
                 expectedType is not null
                 && !expectedType.IsImplicitlyConvertibleFrom(variable.Type)
             )
             {
-                throw new Exception(
-                    $"Type mismatch: {variable.Name} is {variable.Type}; expected {expectedType}"
+                throw new TypeCheckException(
+                    $"Type mismatch: {variable.Name} is {variable.Type}; expected {expectedType}",
+                    GetLineNumber(i)
                 );
             }
 
@@ -333,7 +397,10 @@ public class TypeChecker
                 && !expectedType.IsImplicitlyConvertibleFrom(BuiltIns.Bool)
             )
             {
-                throw new Exception("Only Bool instances can be represented by boolean literals");
+                throw new TypeCheckException(
+                    "Only Bool instances can be represented by boolean literals",
+                    GetLineNumber(bl)
+                );
             }
 
             return new TypeCheckedBooleanLiteral { Value = bl.Value };
@@ -350,7 +417,10 @@ public class TypeChecker
 
                 if (!ops.Any())
                 {
-                    throw new Exception($"Operator {pe.Operator} cannot produce {expectedType}");
+                    throw new TypeCheckException(
+                        $"Operator {pe.Operator} cannot produce {expectedType}",
+                        GetLineNumber(pe)
+                    );
                 }
             }
 
@@ -372,12 +442,16 @@ public class TypeChecker
         {
             var targetType =
                 LookupType(ce.DeclaredType)
-                ?? throw new Exception($"Unrecognized type {ce.DeclaredType}");
+                ?? throw new TypeCheckException(
+                    $"Unrecognized type {ce.DeclaredType}",
+                    GetLineNumber(ce)
+                );
 
             if (expectedType is not null && expectedType != targetType)
             {
-                throw new Exception(
-                    $"Cast type {ce.DeclaredType} does not match expected type {expectedType}"
+                throw new TypeCheckException(
+                    $"Cast type {ce.DeclaredType} does not match expected type {expectedType}",
+                    GetLineNumber(ce)
                 );
             }
 
@@ -390,7 +464,10 @@ public class TypeChecker
                 var untypedResult = CheckExpressionType(ce.Value, null);
                 if (!targetType.IsCastableFrom(untypedResult.Type))
                 {
-                    throw new Exception($"{untypedResult.Type} is not castable to {targetType}");
+                    throw new TypeCheckException(
+                        $"{untypedResult.Type} is not castable to {targetType}",
+                        GetLineNumber(ce)
+                    );
                 }
                 return new TypeCheckedCastExpression { Base = untypedResult, Type = targetType };
             }
@@ -400,7 +477,10 @@ public class TypeChecker
             var base_ = CheckExpressionType(ie.Base, null);
             if (base_.Type.Subscript is null)
             {
-                throw new Exception($"Type {base_.Type} has no subscript");
+                throw new TypeCheckException(
+                    $"Type {base_.Type} has no subscript",
+                    GetLineNumber(ie)
+                );
             }
 
             if (
@@ -408,8 +488,9 @@ public class TypeChecker
                 && !expectedType.IsImplicitlyConvertibleFrom(base_.Type.Subscript.ReturnType)
             )
             {
-                throw new Exception(
-                    $"Subscript on {base_.Type} returns {base_.Type.Subscript.ReturnType}, not {expectedType}"
+                throw new TypeCheckException(
+                    $"Subscript on {base_.Type} returns {base_.Type.Subscript.ReturnType}, not {expectedType}",
+                    GetLineNumber(ie)
                 );
             }
 
@@ -421,11 +502,17 @@ public class TypeChecker
         {
             if (expectedType is null)
             {
-                throw new Exception("Array literals must have an explicit type");
+                throw new TypeCheckException(
+                    "Array literals must have an explicit type",
+                    GetLineNumber(al)
+                );
             }
             if (expectedType.Name != "Array")
             {
-                throw new Exception("Only Arrays can be represented by array literals");
+                throw new TypeCheckException(
+                    "Only Arrays can be represented by array literals",
+                    GetLineNumber(al)
+                );
             }
 
             return new TypeCheckedArrayLiteral
@@ -443,7 +530,10 @@ public class TypeChecker
                 && !expectedType.IsImplicitlyConvertibleFrom(BuiltIns.Char)
             )
             {
-                throw new Exception("Only Char instances can be represented by character literals");
+                throw new TypeCheckException(
+                    "Only Char instances can be represented by character literals",
+                    GetLineNumber(cl)
+                );
             }
 
             return new TypeCheckedCharLiteral { Value = (byte)cl.Value };
@@ -455,15 +545,19 @@ public class TypeChecker
             {
                 var prop =
                     base_.Type.Properties.SingleOrDefault(p => p.Name == i0.Name)
-                    ?? throw new Exception($"Type {base_.Type} has no member {i0.Name}");
+                    ?? throw new TypeCheckException(
+                        $"Type {base_.Type} has no member {i0.Name}",
+                        GetLineNumber(i0)
+                    );
 
                 if (
                     expectedType is not null
                     && !expectedType.IsImplicitlyConvertibleFrom(prop.Type)
                 )
                 {
-                    throw new Exception(
-                        $"{base_.Type}.{prop.Name} is of type {prop.Type} ({expectedType} expected)"
+                    throw new TypeCheckException(
+                        $"{base_.Type}.{prop.Name} is of type {prop.Type} ({expectedType} expected)",
+                        GetLineNumber(i0)
                     );
                 }
 
@@ -475,7 +569,10 @@ public class TypeChecker
 
                 if (!methods.Any())
                 {
-                    throw new Exception($"Type {base_.Type} has no method named {fc0.Function}");
+                    throw new TypeCheckException(
+                        $"Type {base_.Type} has no method named {fc0.Function}",
+                        GetLineNumber(fc0)
+                    );
                 }
 
                 if (expectedType is not null)
@@ -486,8 +583,9 @@ public class TypeChecker
 
                     if (!methods.Any())
                     {
-                        throw new Exception(
-                            $"Method {base_.Type}.{fc0.Function} has no overloads that return {expectedType}"
+                        throw new TypeCheckException(
+                            $"Method {base_.Type}.{fc0.Function} has no overloads that return {expectedType}",
+                            GetLineNumber(fc0)
                         );
                     }
                 }
@@ -513,7 +611,7 @@ public class TypeChecker
             else
             {
                 throw new ArgumentException(
-                    $"COMPILER BUG: Unrecognized member access type '{expr.Type}'",
+                    $"Unrecognized member access type '{expr.Type}'",
                     nameof(expr)
                 );
             }
@@ -533,10 +631,12 @@ public class TypeChecker
         }
         else
         {
-            baseType = LookupType(cd.Base) ?? throw new Exception($"Unrecognized type {cd.Base}");
+            baseType =
+                LookupType(cd.Base)
+                ?? throw new TypeCheckException($"Unrecognized type {cd.Base}", GetLineNumber(cd));
             if (!baseType.IsInheritable)
             {
-                throw new Exception($"{cd.Base} is not inheritable");
+                throw new TypeCheckException($"{cd.Base} is not inheritable", GetLineNumber(cd));
             }
         }
 
@@ -567,13 +667,17 @@ public class TypeChecker
         {
             return found.Instantiate(
                 type.Arguments.Select(t =>
-                    LookupType(t) ?? throw new Exception($"Unrecognized type {t}")
+                    LookupType(t)
+                    ?? throw new TypeCheckException($"Unrecognized type {t}", GetLineNumber(type))
                 )
             );
         }
         else if (found.GenericTypes.Count > 0)
         {
-            throw new Exception($"Missing generic type arguments for type {type.Name}");
+            throw new TypeCheckException(
+                $"Missing generic type arguments for type {type.Name}",
+                GetLineNumber(type)
+            );
         }
 
         return found;

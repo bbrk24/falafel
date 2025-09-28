@@ -27,7 +27,7 @@ Statement
 
 ConditionalStatement
   /(?<!\w|\d)if/ _* "(" _* Expression:cond _* ")" _* "{" Statements:body "}" _* ElseClause?:alt ->
-    return { type: 'ConditionalStatement', condition: cond, trueBlock: body, falseBlock: alt };
+    return { type: 'ConditionalStatement', condition: cond, trueBlock: body, falseBlock: alt, loc: $loc };
 
 ElseClause
   "else" _* "{" Statements "}" -> $4
@@ -36,13 +36,13 @@ ElseClause
 
 LoopStatement
   /(?<!\w|\d)while/ _* "(" _* Expression:cond _* ")" _* "{" Statements:body "}" ->
-    return { type: 'LoopStatement', condition: cond, body }
+    return { type: 'LoopStatement', condition: cond, body, loc: $loc }
 
 Assignment
   MemberAccessExpression _* "=" _* Expression ->
-    return { type: 'Assignment', lhs: $1, rhs: $5 }
+    return { type: 'Assignment', lhs: $1, rhs: $5, loc: $loc }
   MemberAccessExpression:lhs _* ("+" / "-" / "*" / "/" / "%" / "&&" / "||"):operator "=" _* Expression:rhs ->
-    return { type: 'Assignment', lhs, rhs: { type: 'BinaryExpression', lhs, rhs, operator } }
+    return { type: 'Assignment', lhs, rhs: { type: 'BinaryExpression', lhs, rhs, operator, loc: $loc }, loc: $loc }
 
 Declaration
   ClassDefinition
@@ -57,7 +57,7 @@ ClassBody
 
 ClassDefinition
   "final"?:final _+ "class" _+ Identifier:name _* InheritanceClause?:base _* ClassBody:body ->
-    return { type: 'ClassDefinition', name, base, body, final: final != null }
+    return { type: 'ClassDefinition', name, base, body, final: final != null, loc: $loc }
 
 Type
   Identifier "<" _* Type:arg0 (_* "," _* Type)*:args _* ","? _* ">" ->
@@ -65,9 +65,9 @@ Type
       arg0,
       ...args.map(el => el[3])
     ];
-    return { name: $1, arguments: arguments_ };
+    return { name: $1, arguments: arguments_, loc: $loc };
   Identifier ->
-    return { name: $1, arguments: [] }
+    return { name: $1, arguments: [], loc: $loc }
   "(" _* Type _* ")" -> $3
 
 TypeClause
@@ -75,7 +75,7 @@ TypeClause
 
 VarDeclaration
   "var" _+ Identifier:name _* TypeClause:declaredType _* "=" _* Expression:value EOS ->
-    return { type: 'VarDeclaration', name, declaredType, value }
+    return { type: 'VarDeclaration', name, declaredType, value, loc: $loc }
 
 # BaseExpression is any expression that is not a BinaryExpression or MemberAccessExpression.
 # BinaryExpression is then built in several layers on top of BaseExpression so as to establish
@@ -93,27 +93,27 @@ BaseExpression
   CharLiteral
   "(" _* Expression _* ")" -> $3
   Identifier ->
-    return { type: 'Identifier', name: $1 }
+    return { type: 'Identifier', name: $1, loc: $loc }
   PrefixExpression
   ArrayLiteral
 
 BooleanLiteral
   /(?<!\w|\d)(?:true|false)(?!\w|\d)/ ->
-    return { type: 'BooleanLiteral', value: $0 === 'true' }
+    return { type: 'BooleanLiteral', value: $0 === 'true', loc: $loc }
 
 PrefixExpression
   ("!" / "-") BaseExpression ->
-    return { type: "PrefixExpression", operator: $1, operand: $2 }
+    return { type: "PrefixExpression", operator: $1, operand: $2, loc: $loc }
 
 FunctionCall
   Identifier "(" _* ")" ->
-    return { type: 'FunctionCall', function: $1, arguments: [] }
+    return { type: 'FunctionCall', function: $1, arguments: [], loc: $loc }
   Identifier "(" _* Expression:arg0 (_* "," _* Expression)*:args _* ","? _* ")" ->
     const arguments_ = [
       arg0,
       ...args.map(el => el[3])
     ];
-    return { type: 'FunctionCall', function: $1, arguments: arguments_ };
+    return { type: 'FunctionCall', function: $1, arguments: arguments_, loc: $loc };
 
 NumberLiteral
   "-"? "0x" /[0-9a-fA-F]+/ ->
@@ -124,7 +124,12 @@ NumberLiteral
     } else if (value < -(1n << 63n) || value >= (1n << 63n)) {
       throw new RangeError(`Integer literal ${stringValue} is too big!`);
     }
-    return { type: 'IntegerLiteral', value }
+
+    if (stringValue.startsWith('-') && value === 0n) {
+      console.warn(`Integer literal ${stringValue} is equivalent to positive 0. Use '-0.0' for floating-point negative zero.`)
+    }
+
+    return { type: 'IntegerLiteral', value, loc: $loc }
 
   /-?(\d+\.\d+)(?:[eE]([+\-]\d+))?/ ->
     const value = Number($0);
@@ -134,7 +139,7 @@ NumberLiteral
     if (value === 0.0 && Number($1) != 0.0 && Number($2) < 0) {
       console.warn(`${$0} is too small and will be rounded to zero.`);
     }
-    return { type: 'DecimalLiteral', value: Number($0) }
+    return { type: 'DecimalLiteral', value, loc: $loc }
 
   /-?\d+/ ->
     const value = BigInt($0);
@@ -143,20 +148,25 @@ NumberLiteral
     } else if (value < -(1n << 63n) || value >= (1n << 63n)) {
       throw new RangeError(`Integer literal ${$0} is too big!`);
     }
-    return { type: 'IntegerLiteral', value }
+
+    if ($0.startsWith('-') && value === 0n) {
+      console.warn(`Integer literal ${$0} is equivalent to positive 0. Use '-0.0' for floating-point negative zero.`)
+    }
+
+    return { type: 'IntegerLiteral', value, loc: $loc }
 
 StringInterpolation
   "`" InterpolationPiece* "`" ->
-    return { type: 'StringInterpolation', pieces: $2 }
+    return { type: 'StringInterpolation', pieces: $2, loc: $loc }
 
 InterpolationPiece
   "${" Expression "}" -> $2
   /(?:[^\\`\n\$]|\\(?:[\\"`nrt\$']|u[0-9a-fA-F]{4}))*/ ->
-    return { type: 'StringLiteral', value: JSON.parse(`"${$0.replaceAll(/\\(['`\$])/gu, $1)}"`) }
+    return { type: 'StringLiteral', value: JSON.parse(`"${$0.replaceAll(/\\(['`\$])/gu, $1)}"`), loc: $loc }
 
 StringLiteral
   /"(?:[^\\"\n]|\\(?:[\\"`nrt\$']|u[0-9a-fA-F]{4}))*"/ ->
-    return { type: 'StringLiteral', value: JSON.parse($0.replaceAll(/\\(['`\$])/gu, $1)) }
+    return { type: 'StringLiteral', value: JSON.parse($0.replaceAll(/\\(['`\$])/gu, $1)), loc: $loc }
 
 ArrayLiteral
   "[" (_* Expression _* "," _*)*:head (Expression _* ("," _*)?)?:tail "]" ->
@@ -167,7 +177,7 @@ ArrayLiteral
     if (tail?.[0] != null) {
       values.push(tail[0]);
     }
-    return { type: 'ArrayLiteral', values };
+    return { type: 'ArrayLiteral', values, loc: $loc };
 
 CharLiteral
   "'" /[^\\'\n]|\\[\\"`nrt\$']/:char "'" ->
@@ -178,11 +188,11 @@ CharLiteral
     if (value.charCodeAt(0) > 0x7f) {
       throw new SyntaxError(`'${value}' is more than one character`);
     }
-    return { type: 'CharLiteral', value };
+    return { type: 'CharLiteral', value, loc: $loc };
 
 MemberAccessExpression
   BaseExpression:first (("." _* (FunctionCall / Identifier)) / (_* "[" _* Expression _* "]") / (_* "@" _* Type))*:rest ->
-    return rest.reduce((acc, curr) => {
+    const result = rest.reduce((acc, curr) => {
       if (curr[0] === '.') {
         return { type: 'MemberAccessExpression', base: acc, member: curr[2] };
       } else if (curr[1] === '@') {
@@ -191,39 +201,53 @@ MemberAccessExpression
         return { type: 'IndexExpression', base: acc, index: curr[3] }; 
       }
     }, first);
+    result.loc ??= $loc;
+    return result;
 
 PowExpression
   (MemberAccessExpression _* "**" _*)*:head MemberAccessExpression:tail ->
-    return head.reduceRight((acc, curr) => {
-      return { type: 'BinaryExpression', lhs: curr[0], operator: "**", rhs: acc }
-    }, tail)
+    const result = head.reduceRight((acc, curr) => {
+      return { type: 'BinaryExpression', lhs: curr[0], operator: "**", rhs: acc };
+    }, tail);
+    result.loc ??= $loc;
+    return result;
 
 MulExpression
   PowExpression:first (_* ("*" / "/" / "%") _* PowExpression)*:rest ->
-    return rest.reduce((acc, curr) => {
-      return { type: 'BinaryExpression', lhs: acc, operator: curr[1], rhs: curr[3] }
-    }, first)
+    const result = rest.reduce((acc, curr) => {
+      return { type: 'BinaryExpression', lhs: acc, operator: curr[1], rhs: curr[3] };
+    }, first);
+    result.loc ??= $loc;
+    return result;
 
 AddExpression
   MulExpression:first (_* ("+" / "-") _* MulExpression)*:rest ->
-    return rest.reduce((acc, curr) => {
-      return { type: 'BinaryExpression', lhs: acc, operator: curr[1], rhs: curr[3] }
-    }, first)
+    const result = rest.reduce((acc, curr) => {
+      return { type: 'BinaryExpression', lhs: acc, operator: curr[1], rhs: curr[3] };
+    }, first);
+    result.loc ??= $loc;
+    return result;
 
 ComparisonExpression
   AddExpression:first (_* (">=" / "<=" / "==" / "!=" / ">" / "<") _* AddExpression)*:rest ->
-    return rest.reduce((acc, curr) => {
-      return { type: 'BinaryExpression', lhs: acc, operator: curr[1], rhs: curr[3] }
-    }, first)
+    const result = rest.reduce((acc, curr) => {
+      return { type: 'BinaryExpression', lhs: acc, operator: curr[1], rhs: curr[3] };
+    }, first);
+    result.loc ??= $loc;
+    return result;
 
 AndExpression
   ComparisonExpression:first (_* "&&" _* ComparisonExpression)*:rest ->
-    return rest.reduce((acc, curr) => {
-      return { type: 'BinaryExpression', lhs: acc, operator: curr[1], rhs: curr[3] }
-    }, first)
+    const result = rest.reduce((acc, curr) => {
+      return { type: 'BinaryExpression', lhs: acc, operator: curr[1], rhs: curr[3] };
+    }, first);
+    result.loc ??= $loc;
+    return result;
 
 Expression
   AndExpression:first (_* "||" _* AndExpression)*:rest ->
-    return rest.reduce((acc, curr) => {
-      return { type: 'BinaryExpression', lhs: acc, operator: curr[1], rhs: curr[3] }
-    }, first)
+    const result = rest.reduce((acc, curr) => {
+      return { type: 'BinaryExpression', lhs: acc, operator: curr[1], rhs: curr[3] };
+    }, first);
+    result.loc ??= $loc;
+    return result;

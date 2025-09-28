@@ -8,8 +8,14 @@ const result = {};
 await Promise.all(
   paths.map(async (path) => {
     const data = await readFile(path, { encoding: 'utf-8' });
-    const ast = parse(data);
-    result[path] = ast;
+    const ast = parse(data, { filename: path });
+
+    const lineCounts = [];
+    for (const match of data.matchAll(/\n/gu)) {
+      lineCounts.push(match.index);
+    }
+
+    result[path] = { ast, lineCounts };
   })
 );
 

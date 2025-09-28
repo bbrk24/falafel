@@ -302,7 +302,7 @@ public class Codegen
         }
         else
         {
-            throw new Exception($"COMPILER BUG: Unrecognized type {expr.GetType()}");
+            throw new Exception($"Unrecognized type {expr.GetType()}");
         }
     }
 
@@ -363,20 +363,15 @@ public class Codegen
 
     private static string MangleMethodName(string original, IEnumerable<Models.Type> argumentTypes)
     {
-        return original
-            + string.Join(
-                "_",
-                argumentTypes
-                    .Select((t, i) => (t, i))
-                    .Where((t) => t.Item1.IsObject)
-                    .Select((t) => t.Item2)
-            );
+        // TODO
+        return original;
     }
 
     private static string RcPointerWrap(Models.Type t)
     {
         var arguments = t.GenericTypes.Select(RcPointerWrap);
-        var fullName = t.GenericTypes.Count > 0 ? $"{t.Name}<{string.Join(", ", arguments)} >" : t.Name;
+        var fullName =
+            t.GenericTypes.Count > 0 ? $"{t.Name}<{string.Join(", ", arguments)} >" : t.Name;
         if (t.IsObject)
         {
             return $"RcPointer<{fullName} >";
