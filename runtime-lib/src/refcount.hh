@@ -5,7 +5,6 @@
 // part (which involves red and orange nodes) is not implemented as programs are currently always
 // single-threaded.
 
-#include "panic.hh"
 #include <cstdint>
 #include <cstdlib>
 #include <functional>
@@ -42,6 +41,11 @@ public:
     {
         return ::operator new(size, location);
     }
+
+    /**
+     * DO NOT CALL THIS DIRECTLY. This is only to be used in case of initialization failure.
+     */
+    static inline void operator delete(void* location) noexcept { free(location); }
 
     void retain() noexcept;
     void release();

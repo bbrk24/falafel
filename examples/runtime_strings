@@ -1,0 +1,5 @@
+var allTogether: String = "1 + 2"
+var separate1: String = `${1} + ${2}`
+var separate2: String = "1" + " + " + "2"
+print(`${allTogether == separate1}`)
+print(`${allTogether == separate2}`)

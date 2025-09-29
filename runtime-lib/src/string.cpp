@@ -1,5 +1,7 @@
 #include "string.hh"
+#include "panic.hh"
 #include <cstdio>
+#include <cstdlib>
 
 String* const String::empty = String::allocate_small_utf8(u8"");
 
@@ -40,14 +42,9 @@ RcPointer<String> String::add(const String* other) const
 
     if (length < MAX_SHORT_STRING_LEN) {
         Data data;
-        strcpy(
-            reinterpret_cast<char*>(data.short_string),
-            reinterpret_cast<const char*>(own_buffer)
-        );
-        strcat(
-            reinterpret_cast<char*>(data.short_string),
-            reinterpret_cast<const char*>(other_buffer)
-        );
+        memcpy(data.short_string, own_buffer, m_length * sizeof(char8_t));
+        memcpy(data.short_string + m_length, other_buffer, other->m_length * sizeof(char8_t));
+        data.short_string[length] = u8'\0';
         return new String(Flags { .is_small = true, .is_immortal = false }, data, length);
     }
 
@@ -83,12 +80,32 @@ Char String::_indexget(Int index) const
     }
 }
 
-void String::print()
+void String::print() const
 {
     const char8_t* own_buffer = m_flags.is_small ? m_data.short_string
         : m_flags.is_immortal                    ? m_data.char8_literal
                                                  : m_data.char8_ptr;
     puts(reinterpret_cast<const char*>(own_buffer));
+}
+
+Bool String::is_equal(const String* other) const noexcept
+{
+    if (other == nullptr || m_length != other->m_length) {
+        return false;
+    }
+
+    const char8_t* own_buffer = m_flags.is_small ? m_data.short_string
+        : m_flags.is_immortal                    ? m_data.char8_literal
+                                                 : m_data.char8_ptr;
+    const char8_t* other_buffer = other->m_flags.is_small ? other->m_data.short_string
+        : other->m_flags.is_immortal                      ? other->m_data.char8_literal
+                                                          : other->m_data.char8_ptr;
+
+    if (own_buffer == other_buffer) {
+        return true;
+    }
+
+    return memcmp(own_buffer, other_buffer, m_length * sizeof(char8_t)) == 0;
 }
 
 void String::visit_children(std::function<void(Object*)>) { }

@@ -1,4 +1,6 @@
 #include "refcount.hh"
+#include "panic.hh"
+// TODO: rewrite collect_cycles to not use std::vector
 #include <algorithm>
 #include <vector>
 

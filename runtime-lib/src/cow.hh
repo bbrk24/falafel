@@ -3,7 +3,9 @@
 #include "max.hh"
 #include "refcount.hh"
 #include <cassert>
+#include <cstdlib>
 #include <cstring>
+#include <new>
 #include <stdexcept>
 #include <type_traits>
 

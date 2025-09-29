@@ -502,6 +502,26 @@ public static class BuiltIns
             IsCppOperator = true,
             CppName = "!=",
         },
+        new Operator
+        {
+            Name = "==",
+            Fixity = OperatorFixity.Infix,
+            LhsType = String,
+            RhsType = String,
+            ReturnType = Bool,
+            IsCppOperator = true,
+            CppName = "->is_equal",
+        },
+        new Operator
+        {
+            Name = "!=",
+            Fixity = OperatorFixity.Infix,
+            LhsType = String,
+            RhsType = String,
+            ReturnType = Bool,
+            IsCppOperator = true,
+            CppName = "->is_not_equal",
+        },
     ];
 
     static BuiltIns()

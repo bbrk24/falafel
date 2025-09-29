@@ -3,6 +3,7 @@
 #include "array.hh"
 #include "string.hh"
 #include "typedefs.hh"
+#include <cstddef>
 
 struct StringBuilder final {
 private:
@@ -13,8 +14,6 @@ private:
 
 public:
     inline StringBuilder(size_t count) : m_pieces(count) { }
-    StringBuilder(const StringBuilder&) = default;
-    StringBuilder(StringBuilder&&) = default;
 
     inline void add_piece(String* piece) { m_pieces.push(piece); }
     inline void add_piece(const RcPointer<String>& piece) { m_pieces.push(piece); }

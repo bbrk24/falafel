@@ -1,6 +1,5 @@
 #pragma once
 
-#include "max.hh"
 #include "refcount.hh"
 #include "typedefs.hh"
 #include <cassert>
@@ -13,6 +12,11 @@ private:
     struct Flags {
         bool is_small : 1;
         bool is_immortal : 1;
+
+        inline bool operator==(const Flags& other) const noexcept
+        {
+            return is_small == other.is_small && is_immortal == other.is_immortal;
+        }
     };
 
     static constexpr size_t MAX_SHORT_STRING_LEN
@@ -51,12 +55,15 @@ public:
     static String* const empty;
 
     RcPointer<String> add(const String* other) const;
+    Bool is_equal(const String* other) const noexcept;
+
+    inline Bool is_not_equal(const String* other) const noexcept { return !is_equal(other); }
 
     Char _indexget(Int index) const;
 
     constexpr Int length() const noexcept { return static_cast<Int>(m_length); }
 
-    void print();
+    void print() const;
 
     ~String() noexcept;
 

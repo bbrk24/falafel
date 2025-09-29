@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Globalization;
 using System.Text;
 using Compiler.Models;
@@ -21,7 +22,7 @@ public class Codegen
             { '\x07', @"\a" },
             { '\x08', @"\b" },
             { '\x7f', @"\177" },
-        };
+        }.ToFrozenDictionary();
 
     static Codegen()
     {
@@ -37,11 +38,11 @@ public class Codegen
     );
     private static readonly byte[] MainExit = Encoding.UTF8.GetBytes("return 0;}");
 
-    private readonly HashSet<string> _stringLiterals = [];
+    private readonly Dictionary<string, uint> _stringLiterals = [];
     private string _beforeMainDecls = "";
     private readonly StringBuilder _mainStatements = new();
     private string _afterMainDecls = "";
-    private int _stringBuilderCount = 0;
+    private uint _stringCount = 0;
     private StringBuilder _currentBlock;
 
     public Codegen()
@@ -53,7 +54,7 @@ public class Codegen
     {
         GenerateCodeWithoutWriting(program);
 
-        foreach (var str in _stringLiterals)
+        foreach (var (str, index) in _stringLiterals)
         {
             string strAllocation;
 
@@ -68,7 +69,7 @@ public class Codegen
                 strAllocation = $"String::allocate_immortal_utf8(u8\"{escaped}\")";
             }
 
-            _beforeMainDecls = $"auto {LiteralName(str)} = {strAllocation};{_beforeMainDecls}";
+            _beforeMainDecls = $"auto {LiteralName(index)} = {strAllocation};{_beforeMainDecls}";
         }
 
         using Stream stream = location is null
@@ -189,7 +190,7 @@ public class Codegen
             }
             else
             {
-                return valueString;
+                return "(Int)" + valueString;
             }
         }
         else if (expr is TypedDecimalLiteral dl)
@@ -216,8 +217,12 @@ public class Codegen
                 return "String::empty";
             }
 
-            _stringLiterals.Add(sl.Value);
-            return LiteralName(sl.Value);
+            if (_stringLiterals.TryAdd(sl.Value, _stringCount))
+            {
+                ++_stringCount;
+            }
+
+            return LiteralName(_stringLiterals[sl.Value]);
         }
         else if (expr is TypeCheckedIdentifier i)
         {
@@ -241,8 +246,17 @@ public class Codegen
         }
         else if (expr is TypeCheckedStringInterpolation si)
         {
-            var sbNum = _stringBuilderCount;
-            ++_stringBuilderCount;
+            if (si.Pieces.All(x => x is TypeCheckedStringLiteral))
+            {
+                var value = string.Join(
+                    "",
+                    si.Pieces.Cast<TypeCheckedStringLiteral>().Select(x => x.Value)
+                );
+                return TranslateExpression(new TypeCheckedStringLiteral { Value = value });
+            }
+
+            var sbNum = _stringCount;
+            ++_stringCount;
 
             _currentBlock.Append($"StringBuilder sb{sbNum}({si.Pieces.Count()}U);");
             foreach (var piece in si.Pieces)
@@ -335,7 +349,7 @@ public class Codegen
         stream.WriteByte(10);
     }
 
-    private static string LiteralName(string s) => $"stringLiteral_{((uint)s.GetHashCode()):X8}";
+    private static string LiteralName(uint index) => $"stringLiteral{index:X}";
 
     private static string EscapeLiteralUtf8(string s)
     {

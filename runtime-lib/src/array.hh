@@ -1,7 +1,10 @@
 #pragma once
 
 #include "cow.hh"
+#include "panic.hh"
 #include "typedefs.hh"
+#include <cstddef>
+#include <cstring>
 #include <initializer_list>
 #include <new>
 #include <utility>
@@ -70,7 +73,7 @@ public:
         m_buffer[static_cast<size_t>(index)] = value;
     }
 
-    constexpr Int length() const noexcept { return static_cast<Int>(m_buffer.length()); }
+    Int length() const noexcept { return static_cast<Int>(m_buffer.length()); }
 
     void visit_children(std::function<void(Object*)> visitor) { visitor(m_buffer); }
 
