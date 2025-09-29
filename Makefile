@@ -1,4 +1,4 @@
-CXXFLAGS := $(CXXFLAGS) -std=c++20 -O3 -DNDEBUG -Wall -Wextra -Wno-sign-compare
+CXXFLAGS := -O3 -DNDEBUG $(CXXFLAGS) -std=c++20 -Wall -Wextra -Wno-sign-compare
 
 .PHONY: all clean
 
@@ -11,7 +11,7 @@ cpp_files = $(wildcard runtime-lib/src/*.cpp)
 cpp_src_headers = $(wildcard runtime-lib/src/*.hh)
 
 dist/obj/libruntime.so: dist/obj/ $(cpp_files) $(cpp_src_headers)
-	$(CXX) $(CXXFLAGS) -shared -o dist/obj/libruntime.so -fPIC $(cpp_files)
+	$(CXX) $(CFLAGS) $(CPPFLAGS) $(CXXFLAGS) -shared -o dist/obj/libruntime.so -fPIC $(cpp_files)
 
 dist/include/: dist/ $(cpp_src_headers) $(wildcard runtime-lib/include/*.hh)
 	cp -RL runtime-lib/include/ dist/
