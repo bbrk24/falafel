@@ -17,18 +17,18 @@ void StringBuilder::add_piece(Int piece)
 
 void StringBuilder::add_piece(Float piece)
 {
-    String* str = String::allocate_runtime_utf8(15U);
+    String* str = String::allocate_runtime_utf8(16U);
     str->m_length = static_cast<size_t>(
-        snprintf(reinterpret_cast<char*>(str->m_data.char8_ptr), 16U, "%.9g", (double)piece)
+        snprintf(reinterpret_cast<char*>(str->m_data.char8_ptr), 17U, "%.9g", (double)piece)
     );
     m_pieces.push(str);
 }
 
 void StringBuilder::add_piece(Double piece)
 {
-    String* str = String::allocate_runtime_utf8(23U);
+    String* str = String::allocate_runtime_utf8(24U);
     str->m_length = static_cast<size_t>(
-        snprintf(reinterpret_cast<char*>(str->m_data.char8_ptr), 24U, "%.17g", piece)
+        snprintf(reinterpret_cast<char*>(str->m_data.char8_ptr), 25U, "%.17g", piece)
     );
     m_pieces.push(str);
 }

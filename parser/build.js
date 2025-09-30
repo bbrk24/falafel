@@ -11,4 +11,5 @@ await esbuild.build({
   plugins: [hera()],
   minify: true,
   banner: { js: '#!/usr/bin/env node' },
+  sourcemap: 'external',
 });
