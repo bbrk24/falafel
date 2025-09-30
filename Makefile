@@ -1,5 +1,5 @@
 # MARK: Build
-CXXFLAGS := $(CXXFLAGS) -fuse-ld=gold -std=c++20 -Wall -Wextra -Wformat-truncation=2 -Wno-sign-compare
+CXXFLAGS := $(CXXFLAGS) -std=c++20 -Wall -Wextra -Wformat-truncation=2 -Wno-sign-compare
 
 .PHONY: build-release build-debug
 common_outputs := dist/obj/libruntime.so dist/include/ dist/bin/Compiler dist/bin/index.js
@@ -15,7 +15,7 @@ cpp_files = $(wildcard runtime-lib/src/*.cpp)
 cpp_src_headers = $(wildcard runtime-lib/src/*.hh)
 
 dist/obj/libruntime.so: dist/ $(cpp_files) $(cpp_src_headers)
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -shared -o dist/obj/libruntime.so -fPIC $(cpp_files)
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -shared -o dist/obj/libruntime.so -fPIC $(cpp_files) $(LDFLAGS)
 
 dist/include/: dist/ $(cpp_src_headers) $(wildcard runtime-lib/include/*.hh)
 	cp -RL runtime-lib/include/ dist/
