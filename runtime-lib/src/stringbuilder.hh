@@ -7,10 +7,10 @@
 
 struct StringBuilder final {
 private:
-    static String* empty_brackets;
-    static String* open_bracket;
-    static String* close_bracket;
-    static String* comma_space;
+    static String* const empty_brackets;
+    static String* const open_bracket;
+    static String* const close_bracket;
+    static String* const comma_space;
 
 public:
     inline StringBuilder(size_t count) : m_pieces(count) { }

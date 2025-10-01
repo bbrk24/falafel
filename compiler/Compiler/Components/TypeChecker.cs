@@ -255,7 +255,7 @@ public class TypeChecker
         {
             if (expectedType == BuiltIns.Float)
             {
-                if (Math.Abs(dl.Value) > (double)float.MaxValue)
+                if (double.IsFinite(dl.Value) && Math.Abs(dl.Value) > (double)float.MaxValue)
                 {
                     throw new TypeCheckException(
                         $"Decimal literal is too large to store as Float",

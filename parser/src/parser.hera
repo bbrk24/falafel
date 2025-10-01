@@ -84,6 +84,7 @@ BaseExpression
   # Some notes on ordering:
   # - FunctionCall must come before Identifier
   # - BooleanLiteral must come before Identifier
+  # - NumberLiteral must come before Identifier
   # - I think FunctionCall must come before paren handling but I haven't proven it
   FunctionCall
   BooleanLiteral
@@ -154,6 +155,9 @@ NumberLiteral
     }
 
     return { type: 'IntegerLiteral', value, loc: $loc }
+  
+  "Infinity" / "NaN" ->
+    return { type: 'DecimalLiteral', value: $1, loc: $loc }
 
 StringInterpolation
   "`" InterpolationPiece* "`" ->

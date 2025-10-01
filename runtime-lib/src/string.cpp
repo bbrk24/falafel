@@ -15,7 +15,7 @@ String::~String() noexcept
 String* String::allocate_runtime_utf8(size_t length)
 {
     char8_t* buffer = (char8_t*)calloc(length + 1U, sizeof(char8_t));
-    if (buffer == nullptr) {
+    if (buffer == nullptr) [[unlikely]] {
         Object::collect_cycles();
         char8_t* buffer = (char8_t*)calloc(length + 1U, sizeof(char8_t));
         if (buffer == nullptr) {
@@ -49,7 +49,7 @@ RcPointer<String> String::add(const String* other) const
     }
 
     char8_t* buffer = (char8_t*)calloc(length + 1U, sizeof(char8_t));
-    if (buffer == nullptr) {
+    if (buffer == nullptr) [[unlikely]] {
         Object::collect_cycles();
         char8_t* buffer = (char8_t*)calloc(length + 1U, sizeof(char8_t));
         if (buffer == nullptr) {
@@ -68,7 +68,7 @@ RcPointer<String> String::add(const String* other) const
 
 Char String::_indexget(Int index) const
 {
-    if (index < 0 || index >= m_length) {
+    if (index < 0 || index >= m_length) [[unlikely]] {
         panic("Index out of bounds");
     }
     if (m_flags.is_small) {

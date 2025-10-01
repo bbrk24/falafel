@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "@danielx/hera": "^0.8.17",
+    "@danielx/hera": "~0.8.18",
     "true-json-bigint": "^1.0.1"
   },
   "type": "module",

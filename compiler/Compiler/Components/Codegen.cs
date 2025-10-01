@@ -196,19 +196,21 @@ public class Codegen
         else if (expr is TypedDecimalLiteral dl)
         {
             var valueString = dl.Value.ToString("g17", NumberFormatter);
-            if (!valueString.Contains('.') && !valueString.Contains('e'))
+
+            if (double.IsFinite(dl.Value))
             {
-                valueString += ".0";
+                if (!valueString.Contains('.') && !valueString.Contains('e'))
+                {
+                    valueString += ".0";
+                }
+
+                if (dl.Type == BuiltIns.Float)
+                {
+                    return valueString + 'f';
+                }
             }
 
-            if (dl.Type == BuiltIns.Float)
-            {
-                return valueString + 'f';
-            }
-            else
-            {
-                return valueString;
-            }
+            return valueString;
         }
         else if (expr is TypeCheckedStringLiteral sl)
         {

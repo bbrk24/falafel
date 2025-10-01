@@ -1,5 +1,6 @@
 ﻿using System.Collections.Specialized;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Compiler.Components;
 using Compiler.Models;
 using Compiler.Util;
@@ -11,7 +12,11 @@ try
     var decoded =
         JsonSerializer.Deserialize<Dictionary<string, AstRoot>>(
             jsonContent,
-            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
+            new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
+            }
         ) ?? throw new Exception("Unexpected JSON null");
 
     if (decoded.Count > 1)

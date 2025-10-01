@@ -1,5 +1,5 @@
 import esbuild from 'esbuild';
-import hera from '@danielx/hera/esbuild-plugin';
+import heraPlugin from '@danielx/hera/esbuild';
 import * as path from 'node:path';
 
 await esbuild.build({
@@ -8,7 +8,7 @@ await esbuild.build({
   platform: 'node',
   outdir: 'dist',
   format: 'esm',
-  plugins: [hera()],
+  plugins: [heraPlugin({ inlineMap: true })],
   minify: true,
   banner: { js: '#!/usr/bin/env node' },
   sourcemap: 'external',

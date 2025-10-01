@@ -19,7 +19,6 @@ dist/obj/libruntime.so: dist/ $(cpp_files) $(cpp_src_headers)
 
 dist/include/: dist/ $(cpp_src_headers) $(wildcard runtime-lib/include/*.hh)
 	cp -RL runtime-lib/include/ dist/
-	touch dist/include/
 
 dotnet_runtime := $(shell dotnet --info | grep '^ RID:' | tr -s ' ' | cut -d' ' -f3)
 csharp_files = $(shell find compiler/Compiler/ -path compiler/Compiler/obj -prune -o -name '*.cs' -print)

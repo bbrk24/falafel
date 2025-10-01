@@ -129,7 +129,7 @@ public:
 
     void realloc(size_t capacity)
     {
-        if (capacity < length()) {
+        if (capacity < length()) [[unlikely]] {
             throw std::logic_error("Capacity cannot be less than length");
         }
         size_t total_size = capacity * sizeof(T) + header_offset();
@@ -146,7 +146,7 @@ public:
         } else {
             void* old_header_ptr = static_cast<void*>(m_pointer - header_offset());
             void* realloc_ptr = ::realloc(old_header_ptr, total_size);
-            if (realloc_ptr == nullptr) {
+            if (realloc_ptr == nullptr) [[unlikely]] {
                 Object::collect_cycles();
                 realloc_ptr = ::realloc(old_header_ptr, total_size);
                 if (realloc_ptr == nullptr) {

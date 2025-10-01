@@ -1,10 +1,15 @@
 #include "stringbuilder.hh"
 #include <cinttypes>
+#include <cmath>
 
-String* StringBuilder::empty_brackets = String::allocate_small_utf8(u8"[]");
-String* StringBuilder::open_bracket = String::allocate_small_utf8(u8"[");
-String* StringBuilder::close_bracket = String::allocate_small_utf8(u8"]");
-String* StringBuilder::comma_space = String::allocate_small_utf8(u8", ");
+String* const StringBuilder::empty_brackets = String::allocate_small_utf8(u8"[]");
+String* const StringBuilder::open_bracket = String::allocate_small_utf8(u8"[");
+String* const StringBuilder::close_bracket = String::allocate_small_utf8(u8"]");
+String* const StringBuilder::comma_space = String::allocate_small_utf8(u8", ");
+
+static String* const infinity_str = String::allocate_immortal_utf8(u8"Infinity");
+static String* const minus_infinity_str = String::allocate_immortal_utf8(u8"-Infinity");
+static String* const nan_str = String::allocate_small_utf8(u8"NaN");
 
 void StringBuilder::add_piece(Int piece)
 {
@@ -17,20 +22,36 @@ void StringBuilder::add_piece(Int piece)
 
 void StringBuilder::add_piece(Float piece)
 {
-    String* str = String::allocate_runtime_utf8(16U);
-    str->m_length = static_cast<size_t>(
-        snprintf(reinterpret_cast<char*>(str->m_data.char8_ptr), 17U, "%.9g", (double)piece)
-    );
-    m_pieces.push(str);
+    if (std::isfinite(piece)) [[likely]] {
+        String* str = String::allocate_runtime_utf8(16U);
+        str->m_length = static_cast<size_t>(
+            snprintf(reinterpret_cast<char*>(str->m_data.char8_ptr), 17U, "%.9g", (double)piece)
+        );
+        m_pieces.push(str);
+    } else if (std::isnan(piece)) {
+        m_pieces.push(nan_str);
+    } else if (piece > 0.0f) {
+        m_pieces.push(infinity_str);
+    } else {
+        m_pieces.push(minus_infinity_str);
+    }
 }
 
 void StringBuilder::add_piece(Double piece)
 {
-    String* str = String::allocate_runtime_utf8(24U);
-    str->m_length = static_cast<size_t>(
-        snprintf(reinterpret_cast<char*>(str->m_data.char8_ptr), 25U, "%.17g", piece)
-    );
-    m_pieces.push(str);
+    if (std::isfinite(piece)) [[likely]] {
+        String* str = String::allocate_runtime_utf8(24U);
+        str->m_length = static_cast<size_t>(
+            snprintf(reinterpret_cast<char*>(str->m_data.char8_ptr), 25U, "%.17g", piece)
+        );
+        m_pieces.push(str);
+    } else if (std::isnan(piece)) {
+        m_pieces.push(nan_str);
+    } else if (piece > 0.0f) {
+        m_pieces.push(infinity_str);
+    } else {
+        m_pieces.push(minus_infinity_str);
+    }
 }
 
 static String* stringLiteral_true = String::allocate_small_utf8(u8"true");
@@ -53,7 +74,7 @@ void StringBuilder::add_piece(Char piece)
 
 RcPointer<String> StringBuilder::build()
 {
-    if (m_pieces.length() == 0) {
+    if (m_pieces.length() == 0) [[unlikely]] {
         return String::empty;
     }
     if (m_pieces.length() == 1) {

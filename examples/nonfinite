@@ -1,0 +1,6 @@
+var infD: Double = Infinity
+var infF: Float = Infinity
+var nanD: Double = NaN
+var nanF: Float = NaN
+
+print(`${infD} ${infF} ${nanD} ${nanF}`)

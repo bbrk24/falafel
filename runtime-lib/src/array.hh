@@ -5,7 +5,6 @@
 #include "typedefs.hh"
 #include <cstddef>
 #include <cstring>
-#include <initializer_list>
 #include <new>
 #include <utility>
 
@@ -49,7 +48,7 @@ public:
 
     const T& _indexget(Int index) const
     {
-        if (index < 0) {
+        if (index < 0) [[unlikely]] {
             panic("Invalid index");
         }
         return m_buffer[static_cast<size_t>(index)];
@@ -57,7 +56,7 @@ public:
 
     void _indexset(Int index, T&& value)
     {
-        if (index < 0) {
+        if (index < 0) [[unlikely]] {
             panic("Invalid index");
         }
         m_buffer.ensure_unique();
@@ -66,7 +65,7 @@ public:
 
     void _indexset(Int index, const T& value)
     {
-        if (index < 0) {
+        if (index < 0) [[unlikely]] {
             panic("Invalid index");
         }
         m_buffer.ensure_unique();

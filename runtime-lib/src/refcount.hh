@@ -26,7 +26,7 @@ public:
     static inline void* operator new(size_t size)
     {
         void* ptr = malloc(size);
-        if (ptr == nullptr) {
+        if (ptr == nullptr) [[unlikely]] {
             collect_cycles();
             ptr = malloc(size);
             if (ptr == nullptr) {
