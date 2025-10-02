@@ -10,6 +10,8 @@ String* const StringBuilder::comma_space = String::allocate_small_utf8(u8", ");
 static String* const infinity_str = String::allocate_immortal_utf8(u8"Infinity");
 static String* const minus_infinity_str = String::allocate_immortal_utf8(u8"-Infinity");
 static String* const nan_str = String::allocate_small_utf8(u8"NaN");
+static String* const true_str = String::allocate_small_utf8(u8"true");
+static String* const false_str = String::allocate_small_utf8(u8"false");
 
 void StringBuilder::add_piece(Int piece)
 {
@@ -47,20 +49,14 @@ void StringBuilder::add_piece(Double piece)
         m_pieces.push(str);
     } else if (std::isnan(piece)) {
         m_pieces.push(nan_str);
-    } else if (piece > 0.0f) {
+    } else if (piece > 0.0) {
         m_pieces.push(infinity_str);
     } else {
         m_pieces.push(minus_infinity_str);
     }
 }
 
-static String* stringLiteral_true = String::allocate_small_utf8(u8"true");
-static String* stringLiteral_false = String::allocate_small_utf8(u8"false");
-
-void StringBuilder::add_piece(Bool piece)
-{
-    m_pieces.push(piece ? stringLiteral_true : stringLiteral_false);
-}
+void StringBuilder::add_piece(Bool piece) { m_pieces.push(piece ? true_str : false_str); }
 
 void StringBuilder::add_piece(Char piece)
 {

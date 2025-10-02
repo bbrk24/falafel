@@ -11,7 +11,7 @@
 template<typename T>
 struct Array final {
 public:
-    Array() = default;
+    Array() noexcept = default;
     Array(size_t capacity) : m_buffer(capacity) { }
 
     Array(std::initializer_list<T> list) : m_buffer(list.size())

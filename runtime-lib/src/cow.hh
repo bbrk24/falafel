@@ -215,13 +215,13 @@ public:
 
     const T* base_pointer() const noexcept { return reinterpret_cast<T*>(m_pointer); }
 
-    T* operator+(ptrdiff_t offset)
+    T* operator+(ptrdiff_t offset) noexcept
     {
         assert(offset >= 0 && offset < m_capacity);
         return base_pointer() + offset;
     }
 
-    const T* operator+(ptrdiff_t offset) const
+    const T* operator+(ptrdiff_t offset) cons noexcept
     {
         assert(offset >= 0 && offset < m_capacity);
         return base_pointer() + offset;

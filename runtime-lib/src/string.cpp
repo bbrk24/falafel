@@ -1,7 +1,9 @@
 #include "string.hh"
 #include "panic.hh"
+#include <cerrno>
 #include <cstdio>
 #include <cstdlib>
+#include <system_error>
 
 String* const String::empty = String::allocate_small_utf8(u8"");
 
@@ -17,7 +19,7 @@ String* String::allocate_runtime_utf8(size_t length)
     char8_t* buffer = (char8_t*)calloc(length + 1U, sizeof(char8_t));
     if (buffer == nullptr) [[unlikely]] {
         Object::collect_cycles();
-        char8_t* buffer = (char8_t*)calloc(length + 1U, sizeof(char8_t));
+        buffer = (char8_t*)calloc(length + 1U, sizeof(char8_t));
         if (buffer == nullptr) {
             throw std::bad_alloc();
         }
@@ -51,7 +53,7 @@ RcPointer<String> String::add(const String* other) const
     char8_t* buffer = (char8_t*)calloc(length + 1U, sizeof(char8_t));
     if (buffer == nullptr) [[unlikely]] {
         Object::collect_cycles();
-        char8_t* buffer = (char8_t*)calloc(length + 1U, sizeof(char8_t));
+        buffer = (char8_t*)calloc(length + 1U, sizeof(char8_t));
         if (buffer == nullptr) {
             throw std::bad_alloc();
         }
@@ -66,7 +68,7 @@ RcPointer<String> String::add(const String* other) const
     );
 }
 
-Char String::_indexget(Int index) const
+Char String::_indexget(Int index) const noexcept
 {
     if (index < 0 || index >= m_length) [[unlikely]] {
         panic("Index out of bounds");
@@ -85,7 +87,11 @@ void String::print() const
     const char8_t* own_buffer = m_flags.is_small ? m_data.short_string
         : m_flags.is_immortal                    ? m_data.char8_literal
                                                  : m_data.char8_ptr;
-    puts(reinterpret_cast<const char*>(own_buffer));
+    errno = 0;
+    int result = puts(reinterpret_cast<const char*>(own_buffer));
+    if (result == EOF) {
+        throw std::system_error(errno, std::generic_category());
+    }
 }
 
 Bool String::is_equal(const String* other) const noexcept

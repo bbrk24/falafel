@@ -59,7 +59,7 @@ public:
 
     inline Bool is_not_equal(const String* other) const noexcept { return !is_equal(other); }
 
-    Char _indexget(Int index) const;
+    Char _indexget(Int index) const noexcept;
 
     constexpr Int length() const noexcept { return static_cast<Int>(m_length); }
 

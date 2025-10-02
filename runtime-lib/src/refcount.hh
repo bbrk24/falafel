@@ -82,17 +82,17 @@ private:
 template<typename T>
 class RcPointer final {
 public:
-    constexpr RcPointer(T* obj) : m_obj(obj) { }
-    constexpr RcPointer() : m_obj(nullptr) { }
+    constexpr RcPointer(T* obj) noexcept : m_obj(obj) { }
+    constexpr RcPointer() noexcept : m_obj(nullptr) { }
 
-    RcPointer(const RcPointer<T>& other) : m_obj(other.m_obj)
+    RcPointer(const RcPointer<T>& other) noexcept : m_obj(other.m_obj)
     {
         if (m_obj != nullptr) {
             m_obj->retain();
         }
     }
 
-    RcPointer(RcPointer<T>&& other) : m_obj(other.m_obj) { other.m_obj = nullptr; }
+    RcPointer(RcPointer<T>&& other) noexcept : m_obj(other.m_obj) { other.m_obj = nullptr; }
 
     template<typename U>
     explicit RcPointer(const RcPointer<U>& other) : m_obj(dynamic_cast<T*>(static_cast<U*>(other)))
@@ -140,7 +140,7 @@ public:
 
     void null_without_release() noexcept { m_obj = nullptr; }
 
-    constexpr T& operator*() const { return *m_obj; }
+    constexpr T& operator*() const noexcept { return *m_obj; }
     constexpr T* operator->() const noexcept { return m_obj; }
 
     constexpr operator T*() const noexcept { return m_obj; }
