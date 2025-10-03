@@ -342,7 +342,23 @@ public class TypeChecker
 
             if (expectedType is not null)
             {
-                ops = ops.Where(op => expectedType.IsImplicitlyConvertibleFrom(op.ReturnType));
+                ops = ops.SelectMany<Operator, Operator>(op =>
+                {
+                    if (expectedType.IsImplicitlyConvertibleFrom(op.ReturnType))
+                    {
+                        return [op];
+                    }
+                    if (op.GenericTypes.Count == 0)
+                    {
+                        return [];
+                    }
+                    var derivedInstantiation = op.ReturnType.DeriveInstantiation(expectedType);
+                    if (derivedInstantiation is null)
+                    {
+                        return [];
+                    }
+                    return [op.Instantiate(derivedInstantiation)];
+                });
 
                 if (!ops.Any())
                 {
@@ -357,8 +373,56 @@ public class TypeChecker
                 ops,
                 (op) =>
                 {
-                    var lhs = CheckExpressionType(be.Lhs, op.LhsType);
-                    var rhs = CheckExpressionType(be.Rhs, op.RhsType);
+                    TypeCheckedExpression lhs,
+                        rhs;
+                    if (op.GenericTypes.All(t => t.IsFullyInstantiated()))
+                    {
+                        lhs = CheckExpressionType(be.Lhs, op.LhsType);
+                        rhs = CheckExpressionType(be.Rhs, op.RhsType);
+                    }
+                    else
+                    {
+                        lhs = CheckExpressionType(
+                            be.Lhs,
+                            op.LhsType!.IsFullyInstantiated() ? op.LhsType : null
+                        );
+                        rhs = CheckExpressionType(
+                            be.Rhs,
+                            op.RhsType!.IsFullyInstantiated() ? op.RhsType : null
+                        );
+
+                        var derivedInstantiation = op.LhsType.DeriveInstantiation(lhs.Type);
+                        var di2 = op.RhsType.DeriveInstantiation(rhs.Type);
+
+                        if (derivedInstantiation is null || di2 is null)
+                        {
+                            throw new TypeCheckException(
+                                $"Unable to determine generic type for operator {op.Name}",
+                                GetLineNumber(be)
+                            );
+                        }
+
+                        foreach (var kvp in di2)
+                        {
+                            if (derivedInstantiation.TryGetValue(kvp.Key, out var value))
+                            {
+                                if (value != kvp.Value)
+                                {
+                                    throw new TypeCheckException(
+                                        $"Unable to determine generic type for operator {op.Name}",
+                                        GetLineNumber(be)
+                                    );
+                                }
+                            }
+                            else
+                            {
+                                derivedInstantiation.Add(kvp.Key, kvp.Value);
+                            }
+                        }
+
+                        op = op.Instantiate(derivedInstantiation);
+                    }
+
                     return new TypeCheckedOperatorCall
                     {
                         Operator = op,
@@ -507,7 +571,7 @@ public class TypeChecker
                     GetLineNumber(al)
                 );
             }
-            if (expectedType.Name != "Array")
+            if (!expectedType.IsInstantiationOf(BuiltIns.Array))
             {
                 throw new TypeCheckException(
                     "Only Arrays can be represented by array literals",
@@ -522,6 +586,25 @@ public class TypeChecker
                     CheckExpressionType(el, expectedType.GenericTypes.Single())
                 ),
             };
+        }
+        else if (expr is NullLiteral nl)
+        {
+            if (expectedType is null)
+            {
+                throw new TypeCheckException(
+                    "Null literals must have an explicit type",
+                    GetLineNumber(nl)
+                );
+            }
+            if (!expectedType.IsInstantiationOf(BuiltIns.Optional))
+            {
+                throw new TypeCheckException(
+                    "Only Optionals can be represented by null literals",
+                    GetLineNumber(nl)
+                );
+            }
+
+            return new TypeCheckedNullLiteral { Type = expectedType };
         }
         else if (expr is CharLiteral cl)
         {

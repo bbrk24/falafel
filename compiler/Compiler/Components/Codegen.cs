@@ -316,6 +316,10 @@ public class Codegen
         {
             return $@"u8'\x{cl.Value:x2}'";
         }
+        else if (expr is TypeCheckedNullLiteral nl)
+        {
+            return RcPointerWrap(nl.Type) + "(nullptr)";
+        }
         else
         {
             throw new Exception($"Unrecognized type {expr.GetType()}");

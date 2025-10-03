@@ -2,17 +2,14 @@
 
 #include "max.hh"
 #include "refcount.hh"
+#include "visitable.hh"
 #include <cassert>
 #include <cstdlib>
 #include <cstring>
+#include <functional>
 #include <new>
 #include <stdexcept>
 #include <type_traits>
-
-template<typename T>
-concept Visitable = requires(T x, std::function<void(Object*)> visitor) {
-    { x.visit_children(visitor) } -> std::same_as<void>;
-};
 
 template<typename T>
     requires(!std::is_reference_v<T>)
@@ -221,7 +218,7 @@ public:
         return base_pointer() + offset;
     }
 
-    const T* operator+(ptrdiff_t offset) cons noexcept
+    const T* operator+(ptrdiff_t offset) const noexcept
     {
         assert(offset >= 0 && offset < m_capacity);
         return base_pointer() + offset;

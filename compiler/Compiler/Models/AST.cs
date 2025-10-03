@@ -160,6 +160,12 @@ public class BooleanLiteral : Expression
     public Location? Loc { get; set; }
 }
 
+public class NullLiteral : Expression
+{
+    public string Type { get; set; }
+    public Location? Loc { get; set; }
+}
+
 public class PrefixExpression : Expression
 {
     public string Type { get; set; }

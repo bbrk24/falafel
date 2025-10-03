@@ -32,7 +32,7 @@ public static class BuiltIns
 
     private static readonly Type ArrayGenericPlaceholder = new()
     {
-        Name = "T",
+        Name = "_T0",
         IsGenericPlaceholder = true,
     };
 
@@ -61,6 +61,20 @@ public static class BuiltIns
         Subscript = new() { ReturnType = ArrayGenericPlaceholder, IsSettable = true },
     };
 
+    private static readonly Type OptionalGenericPlaceholder = new()
+    {
+        Name = "_T1",
+        IsGenericPlaceholder = true,
+    };
+
+    public static readonly Type Optional = new()
+    {
+        Name = "Optional",
+        GenericTypes = [OptionalGenericPlaceholder],
+        Methods = [new() { Name = "hasValue", ReturnType = Bool }],
+        IsObject = false,
+    };
+
     public static readonly IReadOnlyCollection<Type> Types =
     [
         Int,
@@ -72,6 +86,7 @@ public static class BuiltIns
         String,
         StringBuilder,
         Array,
+        Optional,
     ];
 
     public static readonly IReadOnlyCollection<Method> Methods =
@@ -522,6 +537,17 @@ public static class BuiltIns
             IsCppOperator = true,
             CppName = "->is_not_equal",
         },
+        new Operator
+        {
+            Name = "??",
+            Fixity = OperatorFixity.Infix,
+            LhsType = Optional,
+            RhsType = OptionalGenericPlaceholder,
+            ReturnType = OptionalGenericPlaceholder,
+            IsCppOperator = false,
+            CppName = "OR_ELSE",
+            GenericTypes = [OptionalGenericPlaceholder],
+        },
     ];
 
     static BuiltIns()
@@ -534,6 +560,11 @@ public static class BuiltIns
         foreach (var method in Array.Methods)
         {
             method.ThisType = Array;
+        }
+
+        foreach (var method in Optional.Methods)
+        {
+            method.ThisType = Optional;
         }
     }
 }

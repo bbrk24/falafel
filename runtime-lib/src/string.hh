@@ -4,6 +4,7 @@
 #include "typedefs.hh"
 #include <cassert>
 #include <cstring>
+#include <functional>
 
 class String final : public Object {
     friend struct StringBuilder;

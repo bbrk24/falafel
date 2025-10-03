@@ -74,11 +74,16 @@ public class Type : IEquatable<Type>
     public bool IsFullyInstantiated() =>
         !_isGenericPlaceholder && GenericTypes.All(t => t.IsFullyInstantiated());
 
-    protected Type PartiallyInstantiate(Dictionary<Type, Type> parts)
+    internal Type PartiallyInstantiate(Dictionary<Type, Type> parts)
     {
         if (parts.TryGetValue(this, out var result))
         {
             return result;
+        }
+
+        if (GenericTypes.Count == 0)
+        {
+            return this;
         }
 
         return new Type
@@ -140,12 +145,18 @@ public class Type : IEquatable<Type>
     public Type Instantiate(IEnumerable<Type> types)
     {
         var typeList = types.ToList();
-        if (typeList.Count != GenericTypes.Count)
+
+        if (typeList.Count != (_isGenericPlaceholder ? 1 : GenericTypes.Count))
         {
             throw new ArgumentException(
                 "Incorrect number of generic type arguments",
                 nameof(types)
             );
+        }
+
+        if (_isGenericPlaceholder)
+        {
+            return typeList[0];
         }
 
         var parts = Enumerable.Zip(GenericTypes, types).ToDictionary(t => t.Item1, t => t.Item2);
@@ -156,6 +167,13 @@ public class Type : IEquatable<Type>
     public bool IsImplicitlyConvertibleFrom(Type other)
     {
         if (other == this)
+        {
+            return true;
+        }
+        if (
+            IsInstantiationOf(BuiltIns.Optional)
+            && GenericTypes.Single().IsImplicitlyConvertibleFrom(other)
+        )
         {
             return true;
         }
@@ -180,6 +198,45 @@ public class Type : IEquatable<Type>
         }
 
         return this.IsImplicitlyConvertibleFrom(other) || other.IsImplicitlyConvertibleFrom(this);
+    }
+
+    public bool IsInstantiationOf(Type other) =>
+        IsFullyInstantiated()
+        && (
+            other._isGenericPlaceholder
+            || (
+                IsObject == other.IsObject
+                && GenericTypes.Count > 0
+                && GenericTypes.Count == other.GenericTypes.Count
+                && Name == other.Name
+                && (
+                    BaseType == other.BaseType
+                    || (
+                        BaseType is not null
+                        && other.BaseType is not null
+                        && BaseType.IsInstantiationOf(other.BaseType)
+                    )
+                )
+            )
+        );
+
+    public Dictionary<Type, Type>? DeriveInstantiation(Type other)
+    {
+        if (GenericTypes.Count == 0 && !_isGenericPlaceholder)
+        {
+            return other == this ? [] : null;
+        }
+        if (_isGenericPlaceholder)
+        {
+            return new() { { this, other } };
+        }
+        if (!other.IsInstantiationOf(this))
+        {
+            return null;
+        }
+        return Enumerable
+            .Zip(this.GenericTypes, other.GenericTypes)
+            .ToDictionary(t => t.Item1, t => t.Item2);
     }
 
     public bool IsStrictSuperclassOf(Type other)
@@ -283,6 +340,33 @@ public class Operator
     public Type ReturnType { get; set; }
     public bool IsCppOperator { get; set; }
     public string CppName { get; set; }
+
+    public ICollection<Type> GenericTypes { get; set; } = [];
+
+    public Operator Instantiate(Dictionary<Type, Type> parts)
+    {
+        return new()
+        {
+            Name = Name,
+            Fixity = Fixity,
+            LhsType = LhsType?.PartiallyInstantiate(parts),
+            RhsType = RhsType?.PartiallyInstantiate(parts),
+            ReturnType = ReturnType.PartiallyInstantiate(parts),
+            IsCppOperator = IsCppOperator,
+            CppName = CppName,
+            GenericTypes =
+            [
+                .. GenericTypes.Select(t =>
+                {
+                    if (parts.TryGetValue(t, out var value))
+                    {
+                        return value;
+                    }
+                    return t;
+                }),
+            ],
+        };
+    }
 
     public override string ToString() => $"{Fixity} operator {Name} returning {ReturnType}";
 }

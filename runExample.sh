@@ -9,6 +9,7 @@ dist/bin/index.js "examples/$1" >"$tempjson" &&
     "${CXX:-g++}" ${CPPFLAGS} ${CXXFLAGS} --std=c++20 -O1 -Idist/include -Ldist/obj/ -lruntime \
         -o "$1" "$tempcpp" ${LDFLAGS}
 result=$?
+# clang-format --style=file:runtime-lib/.clang-format "$tempcpp"
 rm "$tempjson" "$tempcpp"
 
 if [ $result -ne 0 ]; then

@@ -1,4 +1,5 @@
 var arr: Array<Int> = [1, 2, 3]
+print(`${arr}`)
 var i: Int = 0
 while (i < arr.length()) {
     print(`${arr[i]}`)

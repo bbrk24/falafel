@@ -1,0 +1,6 @@
+var x: Optional<Int> = 1
+var y: Optional<Int> = null
+
+print(`${x} ${y}`)
+print(`${x ?? 2} ${y ?? 2}`)
+print(`${x.hasValue()} ${y.hasValue()}`)

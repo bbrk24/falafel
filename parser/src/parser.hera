@@ -41,7 +41,7 @@ LoopStatement
 Assignment
   MemberAccessExpression _* "=" _* Expression ->
     return { type: 'Assignment', lhs: $1, rhs: $5, loc: $loc }
-  MemberAccessExpression:lhs _* ("+" / "-" / "*" / "/" / "%" / "&&" / "||"):operator "=" _* Expression:rhs ->
+  MemberAccessExpression:lhs _* ("+" / "-" / "*" / "/" / "%" / "&&" / "||" / "??"):operator "=" _* Expression:rhs ->
     return { type: 'Assignment', lhs, rhs: { type: 'BinaryExpression', lhs, rhs, operator, loc: $loc }, loc: $loc }
 
 Declaration
@@ -82,14 +82,14 @@ VarDeclaration
 # a precedence hierarchy.
 BaseExpression
   # Some notes on ordering:
-  # - FunctionCall must come before Identifier
-  # - BooleanLiteral must come before Identifier
-  # - NumberLiteral must come before Identifier
+  # - All literals besides StringLiteral and CharLiteral must come before Identifier
   # - I think FunctionCall must come before paren handling but I haven't proven it
   FunctionCall
   BooleanLiteral
   StringInterpolation
   NumberLiteral
+  /(?<!\w|\d)null/ ->
+    return { type: 'NullLiteral', loc: $loc }
   StringLiteral
   CharLiteral
   "(" _* Expression _* ")" -> $3
@@ -208,8 +208,16 @@ MemberAccessExpression
     result.loc ??= $loc;
     return result;
 
+CoalesceExpression
+  MemberAccessExpression:first (_* "??" _* MemberAccessExpression)*:rest ->
+    const result = rest.reduce((acc, curr) => {
+      return { type: 'BinaryExpression', lhs: acc, operator: '??', rhs: curr[3] };
+    }, first);
+    result.loc ??= $loc;
+    return result;
+
 PowExpression
-  (MemberAccessExpression _* "**" _*)*:head MemberAccessExpression:tail ->
+  (CoalesceExpression _* "**" _*)*:head CoalesceExpression:tail ->
     const result = head.reduceRight((acc, curr) => {
       return { type: 'BinaryExpression', lhs: curr[0], operator: "**", rhs: acc };
     }, tail);

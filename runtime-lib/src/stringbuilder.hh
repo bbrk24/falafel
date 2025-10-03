@@ -1,9 +1,12 @@
 #pragma once
 
 #include "array.hh"
+#include "optional.hh"
+#include "panic.hh"
 #include "string.hh"
 #include "typedefs.hh"
 #include <cstddef>
+#include <functional>
 
 struct StringBuilder final {
 private:
@@ -11,6 +14,7 @@ private:
     static String* const open_bracket;
     static String* const close_bracket;
     static String* const comma_space;
+    static String* const null_str;
 
 public:
     inline StringBuilder(size_t count) : m_pieces(count) { }
@@ -44,6 +48,26 @@ public:
         inner.add_piece(close_bracket);
 
         m_pieces.push(inner.build());
+    }
+
+    template<typename T>
+    void add_piece(const Optional<T>& piece)
+    {
+        if (piece.hasValue()) {
+            add_piece(piece.or_else([]() -> const T& { panic("Inconsistent hasValue()"); }));
+        } else {
+            add_piece(null_str);
+        }
+    }
+
+    template<typename T>
+    void add_piece(Optional<T>&& piece)
+    {
+        if (piece.hasValue()) {
+            add_piece(piece.or_else([]() -> T&& { panic("Inconsistent hasValue()"); }));
+        } else {
+            add_piece(null_str);
+        }
     }
 
     RcPointer<String> build();

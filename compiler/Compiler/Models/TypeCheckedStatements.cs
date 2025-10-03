@@ -126,6 +126,11 @@ public class TypeCheckedArrayLiteral : TypeCheckedExpression
     public Type Type { get; set; }
 }
 
+public class TypeCheckedNullLiteral : TypeCheckedExpression
+{
+    public Type Type { get; set; }
+}
+
 public class TypeCheckedPropertyAccess : TypeCheckedExpression
 {
     public TypeCheckedExpression Base { get; set; }

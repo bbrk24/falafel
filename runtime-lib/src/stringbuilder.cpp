@@ -6,6 +6,7 @@ String* const StringBuilder::empty_brackets = String::allocate_small_utf8(u8"[]"
 String* const StringBuilder::open_bracket = String::allocate_small_utf8(u8"[");
 String* const StringBuilder::close_bracket = String::allocate_small_utf8(u8"]");
 String* const StringBuilder::comma_space = String::allocate_small_utf8(u8", ");
+String* const StringBuilder::null_str = String::allocate_small_utf8(u8"null");
 
 static String* const infinity_str = String::allocate_immortal_utf8(u8"Infinity");
 static String* const minus_infinity_str = String::allocate_immortal_utf8(u8"-Infinity");

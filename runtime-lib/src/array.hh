@@ -5,6 +5,7 @@
 #include "typedefs.hh"
 #include <cstddef>
 #include <cstring>
+#include <functional>
 #include <new>
 #include <utility>
 
