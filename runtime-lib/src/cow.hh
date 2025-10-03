@@ -4,6 +4,7 @@
 #include "refcount.hh"
 #include "visitable.hh"
 #include <cassert>
+#include <cstddef>
 #include <cstdlib>
 #include <cstring>
 #include <functional>
@@ -15,6 +16,7 @@ template<typename T>
     requires(!std::is_reference_v<T>)
 class CowBuffer final {
     static_assert(sizeof(char) == 1U);
+    static_assert(alignof(max_align_t) % alignof(T) == 0U);
 
 private:
     class Header final : public Object {

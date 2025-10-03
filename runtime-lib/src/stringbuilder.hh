@@ -32,15 +32,15 @@ public:
     template<typename T>
     void add_piece(Array<T> piece)
     {
-        if (piece.length() == 0) {
+        if (piece.length() == 0U) {
             m_pieces.push(empty_brackets);
             return;
         }
 
         StringBuilder inner(static_cast<size_t>(piece.length()) * 2U + 1U);
         inner.add_piece(open_bracket);
-        for (Int i = 0; i < piece.length(); ++i) {
-            if (i != 0) {
+        for (size_t i = 0U; i < piece.length(); ++i) {
+            if (i != 0U) {
                 inner.add_piece(comma_space);
             }
             inner.add_piece(piece._indexget(i));
@@ -53,7 +53,7 @@ public:
     template<typename T>
     void add_piece(const Optional<T>& piece)
     {
-        if (piece.hasValue()) {
+        if (piece.has_value()) {
             add_piece(piece.or_else([]() -> const T& { panic("Inconsistent hasValue()"); }));
         } else {
             add_piece(null_str);
@@ -63,7 +63,7 @@ public:
     template<typename T>
     void add_piece(Optional<T>&& piece)
     {
-        if (piece.hasValue()) {
+        if (piece.has_value()) {
             add_piece(piece.or_else([]() -> T&& { panic("Inconsistent hasValue()"); }));
         } else {
             add_piece(null_str);

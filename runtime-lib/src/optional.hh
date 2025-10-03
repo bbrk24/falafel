@@ -34,7 +34,8 @@ public:
         return *this;
     }
 
-    constexpr bool hasValue() const noexcept { return m_value.has_value(); }
+    constexpr bool has_value() const noexcept { return m_value.has_value(); }
+    constexpr bool f_hasValuebb() const noexcept { return has_value(); }
 
     template<typename F>
     auto or_else(F func) const noexcept(noexcept(func()))
@@ -66,7 +67,8 @@ public:
     constexpr Optional(RcPointer<T>&& ptr) noexcept : m_value(ptr) { }
     constexpr Optional(T* ptr) noexcept : m_value(ptr) { }
 
-    constexpr bool hasValue() const noexcept { return static_cast<T*>(m_value) != nullptr; }
+    constexpr bool has_value() const noexcept { return static_cast<T*>(m_value) != nullptr; }
+    constexpr bool f_hasValuebb() const noexcept { return has_value(); }
 
     template<typename F>
     RcPointer<T> or_else(F func) const noexcept(noexcept(func()))

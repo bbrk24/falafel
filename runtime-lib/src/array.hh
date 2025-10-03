@@ -73,11 +73,17 @@ public:
         m_buffer[static_cast<size_t>(index)] = value;
     }
 
-    Int length() const noexcept { return static_cast<Int>(m_buffer.length()); }
+    size_t length() const noexcept { return m_buffer.length(); }
 
     void visit_children(std::function<void(Object*)> visitor) { visitor(m_buffer); }
 
     void clear() { m_buffer.clear(); }
+
+    Int f_lengthib() const noexcept { return static_cast<Int>(length()); }
+    Void f_clearvb() { clear(); }
+    Void f_popvb() { pop(); }
+    Void f_pushvh(T&& el) { push(std::move(el)); }
+    Void f_pushvh(const T& el) { push(el); }
 
 private:
     CowBuffer<T> m_buffer;

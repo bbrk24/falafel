@@ -10,6 +10,16 @@ public static class BuiltIns
     public static readonly Type Bool = new() { Name = "Bool", IsObject = false };
     public static readonly Type Char = new() { Name = "Char", IsObject = false };
 
+    public static readonly IReadOnlySet<Type> PrimitiveTypes = new HashSet<Type>
+    {
+        Int,
+        Double,
+        Float,
+        Bool,
+        Char,
+        Void,
+    };
+
     public static readonly Type String = new()
     {
         Name = "String",
@@ -47,6 +57,7 @@ public static class BuiltIns
                 Name = "push",
                 ArgumentTypes = [ArrayGenericPlaceholder],
                 ReturnType = Void,
+                OriginallyGenericArguments = new(0b1),
             },
             new()
             {

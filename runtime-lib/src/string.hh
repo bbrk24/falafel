@@ -62,11 +62,13 @@ public:
 
     Char _indexget(Int index) const noexcept;
 
-    constexpr Int length() const noexcept { return static_cast<Int>(m_length); }
+    constexpr size_t length() const noexcept { return m_length; }
 
     void print() const;
 
     ~String() noexcept;
+
+    constexpr Int f_lengthib() const noexcept { return static_cast<Int>(length()); }
 
 protected:
     virtual void visit_children(std::function<void(Object*)> visitor) override;
@@ -93,3 +95,5 @@ private:
     Data m_data;
     size_t m_length;
 };
+
+inline Void f_printvf(String* s) { s->print(); }

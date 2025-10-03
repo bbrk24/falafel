@@ -1,3 +1,4 @@
+using System.Collections.Specialized;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Compiler.Models;
@@ -117,18 +118,13 @@ public class Type : IEquatable<Type>
             ],
             Methods =
             [
-                .. Methods.Select(m =>
+                .. Methods.Select(m => new Method
                 {
-                    return new Method
-                    {
-                        Name = m.Name,
-                        ThisType = this,
-                        ArgumentTypes =
-                        [
-                            .. m.ArgumentTypes.Select(t => t.PartiallyInstantiate(parts)),
-                        ],
-                        ReturnType = m.ReturnType.PartiallyInstantiate(parts),
-                    };
+                    Name = m.Name,
+                    ThisType = this,
+                    ArgumentTypes = [.. m.ArgumentTypes.Select(t => t.PartiallyInstantiate(parts))],
+                    ReturnType = m.ReturnType.PartiallyInstantiate(parts),
+                    OriginallyGenericArguments = m.OriginallyGenericArguments,
                 }),
             ],
             Subscript = Subscript is null
@@ -201,21 +197,18 @@ public class Type : IEquatable<Type>
     }
 
     public bool IsInstantiationOf(Type other) =>
-        IsFullyInstantiated()
-        && (
-            other._isGenericPlaceholder
-            || (
-                IsObject == other.IsObject
-                && GenericTypes.Count > 0
-                && GenericTypes.Count == other.GenericTypes.Count
-                && Name == other.Name
-                && (
-                    BaseType == other.BaseType
-                    || (
-                        BaseType is not null
-                        && other.BaseType is not null
-                        && BaseType.IsInstantiationOf(other.BaseType)
-                    )
+        other._isGenericPlaceholder
+        || (
+            IsObject == other.IsObject
+            && GenericTypes.Count > 0
+            && GenericTypes.Count == other.GenericTypes.Count
+            && Name == other.Name
+            && (
+                BaseType == other.BaseType
+                || (
+                    BaseType is not null
+                    && other.BaseType is not null
+                    && BaseType.IsInstantiationOf(other.BaseType)
                 )
             )
         );
@@ -302,8 +295,24 @@ public class Method
 {
     public string Name { get; set; }
     public Type ThisType { get; set; } = BuiltIns.Void;
-    public ICollection<Type> ArgumentTypes { get; set; } = [];
+
+    private Type[] _argumentTypes = [];
+    public Type[] ArgumentTypes
+    {
+        get => _argumentTypes;
+        set
+        {
+            if (value.Length > 31)
+            {
+                throw new TypeCheckException("A function may only have up to 31 arguments");
+            }
+            _argumentTypes = value;
+        }
+    }
+
     public Type ReturnType { get; set; }
+
+    public BitVector32 OriginallyGenericArguments { get; set; } = new(0);
 
     public override string ToString() =>
         $@"{

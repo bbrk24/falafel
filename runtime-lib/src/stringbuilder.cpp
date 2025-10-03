@@ -63,7 +63,7 @@ void StringBuilder::add_piece(Char piece)
 {
     String* str = new String(
         String::Flags { .is_small = true, .is_immortal = false },
-        String::Data { .short_string = { static_cast<char8_t>(piece), u8'\0' } },
+        String::Data { .short_string = { piece, u8'\0' } },
         1U
     );
     m_pieces.push(str);
@@ -71,10 +71,10 @@ void StringBuilder::add_piece(Char piece)
 
 RcPointer<String> StringBuilder::build()
 {
-    if (m_pieces.length() == 0) [[unlikely]] {
+    if (m_pieces.length() == 0U) [[unlikely]] {
         return String::empty;
     }
-    if (m_pieces.length() == 1) {
+    if (m_pieces.length() == 1U) {
         RcPointer<String> result = m_pieces._indexget(0);
         m_pieces.clear();
         return result;
@@ -82,15 +82,15 @@ RcPointer<String> StringBuilder::build()
 
     size_t length = 0U;
 
-    for (Int i = 0; i < m_pieces.length(); ++i) {
-        length += m_pieces._indexget(i)->m_length;
+    for (size_t i = 0U; i < m_pieces.length(); ++i) {
+        length += m_pieces._indexget(static_cast<Int>(i))->m_length;
     }
 
     String* result = String::allocate_runtime_utf8(length);
 
     size_t offset = 0U;
-    for (Int i = 0; i < m_pieces.length(); ++i) {
-        auto& piece = m_pieces._indexget(i);
+    for (size_t i = 0U; i < m_pieces.length(); ++i) {
+        auto& piece = m_pieces._indexget(static_cast<Int>(i));
         const char8_t* piece_buffer = piece->m_flags.is_small ? piece->m_data.short_string
             : piece->m_flags.is_immortal                      ? piece->m_data.char8_literal
                                                               : piece->m_data.char8_ptr;

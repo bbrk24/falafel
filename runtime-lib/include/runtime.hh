@@ -7,6 +7,4 @@
 #include "runtime/stringbuilder.hh"
 #include "runtime/typedefs.hh"
 
-inline void print(String* strPointer) { strPointer->print(); }
-
 #include <cmath>

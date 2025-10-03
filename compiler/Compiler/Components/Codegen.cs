@@ -2,9 +2,10 @@ using System.Collections.Frozen;
 using System.Globalization;
 using System.Text;
 using Compiler.Models;
+using Compiler.Util;
 using Microsoft.Win32.SafeHandles;
 
-namespace Compiler.Util;
+namespace Compiler.Components;
 
 public class Codegen
 {
@@ -175,7 +176,7 @@ public class Codegen
     {
         if (expr is TypeCheckedFunctionCall fc)
         {
-            return $"{MangleMethodName(fc.Method.Name, fc.Method.ArgumentTypes)}({string.Join(", ", fc.Arguments.Select(TranslateExpression))})";
+            return $"{MangleMethodName(fc.Method)}({string.Join(", ", fc.Arguments.Select(TranslateExpression))})";
         }
         else if (expr is TypedIntegerLiteral il)
         {
@@ -307,7 +308,7 @@ public class Codegen
             }{
                 (mc.Base.Type.IsObject ? "->" : ".")
             }{
-                mc.Method.Name
+                MangleMethodName(mc.Method)
             }({
                 string.Join(", ", mc.Arguments.Select(TranslateExpression))
             })";
@@ -381,10 +382,83 @@ public class Codegen
         return builder.ToString();
     }
 
-    private static string MangleMethodName(string original, IEnumerable<Models.Type> argumentTypes)
+    private const ulong PrimitiveEncoding = 0b00UL;
+    private const ulong ObjectEncoding = 0b01UL;
+    private const ulong StructEncoding = 0b10UL;
+    private const ulong GenericTypeEncoding = 0b11UL;
+
+    private static string MangleMethodName(Method m)
     {
-        // TODO
-        return original;
+        ulong argumentEncoding = 1UL;
+
+        for (int i = 0; i < m.ArgumentTypes.Length; ++i)
+        {
+            argumentEncoding <<= 2;
+            if (m.OriginallyGenericArguments[1 << i])
+            {
+                argumentEncoding |= GenericTypeEncoding;
+            }
+            else if (m.ArgumentTypes[i].IsObject)
+            {
+                argumentEncoding |= ObjectEncoding;
+            }
+            else if (BuiltIns.PrimitiveTypes.Contains(m.ArgumentTypes[i]))
+            {
+                argumentEncoding |= PrimitiveEncoding;
+            }
+            else
+            {
+                argumentEncoding |= StructEncoding;
+            }
+        }
+
+        return $"f_{m.Name}{MangleReturnType(m.ReturnType)}{BaseConverter.ToBase63(argumentEncoding)}";
+    }
+
+    private static string MangleReturnType(Models.Type t)
+    {
+        if (t.IsGenericPlaceholder)
+        {
+            return "t";
+        }
+        if (BuiltIns.PrimitiveTypes.Contains(t))
+        {
+            return char.ToLowerInvariant(t.Name[0]).ToString();
+        }
+        if (t == BuiltIns.String)
+        {
+            return "s";
+        }
+        if (t == BuiltIns.Object)
+        {
+            return "o";
+        }
+        if (t.IsInstantiationOf(BuiltIns.Array))
+        {
+            return 'a' + MangleReturnType(t.GenericTypes.Single());
+        }
+        if (t.IsInstantiationOf(BuiltIns.Optional))
+        {
+            return 'o' + MangleReturnType(t.GenericTypes.Single());
+        }
+
+        char firstChar;
+        if (t.IsObject)
+        {
+            firstChar = 'O';
+        }
+        else
+        {
+            firstChar = 'S';
+        }
+
+        var result = $"{firstChar}{t.Name.Length}{t.Name}";
+        if (t.GenericTypes.Count > 0)
+        {
+            result +=
+                $"{t.GenericTypes.Count}_{string.Join("", t.GenericTypes.Select(MangleReturnType))}";
+        }
+        return result;
     }
 
     private static string RcPointerWrap(Models.Type t)

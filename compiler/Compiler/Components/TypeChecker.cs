@@ -230,7 +230,7 @@ public class TypeChecker
             }
 
             candidateFunctions = candidateFunctions.Where(f =>
-                fc.Arguments.Count() == f.ArgumentTypes.Count
+                fc.Arguments.Count() == f.ArgumentTypes.Length
             );
             if (!candidateFunctions.Any())
             {
@@ -673,7 +673,7 @@ public class TypeChecker
                     }
                 }
 
-                methods = methods.Where(m => m.ArgumentTypes.Count == fc0.Arguments.Count());
+                methods = methods.Where(m => m.ArgumentTypes.Length == fc0.Arguments.Count());
 
                 return ExpectOneSuccess(
                     methods,
