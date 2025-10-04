@@ -77,13 +77,15 @@ cppFlags.push '-O1'
 if process.env.CXXFLAGS
   cppFlags ++= process.env.CXXFLAGS.split ' '
 
-distDir := path.dirname import.meta.dirname
-
 cppFlags.push
   '-std=c++20'
-  '-lruntime'
-  '-I' + path.join distDir, 'include'
-  '-L' + path.join distDir, 'lib'
+  '-lfalafel'
+
+if comptime Boolean process.env.FALAFEL_DEBUG
+  distDir := path.dirname import.meta.dirname
+  cppFlags.push
+    '-I' + path.join distDir, 'include'
+    '-L' + path.join distDir, 'lib'
 
 if argv.o
   cppFlags.push '-o', argv.o

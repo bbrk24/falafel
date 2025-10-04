@@ -1,5 +1,5 @@
 from esbuild import { build }
-from @danielx/civet/esbuild-plugin import civetPlugin
+from @danielx/civet/esbuild import civetPlugin
 from node:path import * as path
 
 await build
@@ -10,7 +10,8 @@ await build
   outdir: 'dist'
   format: 'esm'
   plugins:
-    . civetPlugin { +inlineMap }
+    // @ts-expect-error
+    . civetPlugin { +inlineMap, +typecheck, ts: 'preserve', parseOptions: { +comptime } }
   minify: true
   banner: js: '#!/usr/bin/env node'
   sourcemap: 'external'

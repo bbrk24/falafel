@@ -2,7 +2,7 @@
 CXXFLAGS := $(CXXFLAGS) -std=c++20 -Wall -Wextra -Wformat-truncation=2 -Wno-sign-compare
 
 .PHONY: build-release build-debug
-common_outputs := dist/lib/libruntime.so dist/include/ dist/bin/compiler dist/bin/parser dist/bin/falafel
+common_outputs := dist/lib/libfalafel.so dist/include/ dist/bin/compiler dist/bin/parser dist/bin/falafel
 build-release: $(common_outputs)
 build-debug: $(common_outputs) dist/bin/parser.map dist/bin/falafel.map
 
@@ -10,11 +10,12 @@ build-release: dotnet_config := Release
 build-release: CXXFLAGS := $(CXXFLAGS) -O3 -g0 -DNDEBUG -flto
 build-debug: dotnet_config := Debug
 build-debug: CXXFLAGS := $(CXXFLAGS) -Og -g2
+build-debug: FALAFEL_DEBUG := 1
 
 cpp_files = $(wildcard runtime-lib/src/*.cpp)
 cpp_src_headers = $(wildcard runtime-lib/src/*.hh)
 
-dist/lib/libruntime.so: dist/ $(cpp_files) $(cpp_src_headers)
+dist/lib/libfalafel.so: dist/ $(cpp_files) $(cpp_src_headers)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -shared -o $@ -fPIC $(cpp_files) $(LDFLAGS)
 
 dist/include/: dist/ $(cpp_src_headers) $(wildcard runtime-lib/include/*.hh)
@@ -52,7 +53,7 @@ dist/bin/falafel.map: cli/dist/index.js dist/
 	cp $< $@
 
 cli/dist/index.js: cli/tsconfig.json cli/package-lock.json cli/build.civet $(wildcard cli/src/*)
-	cd cli; npx civet build.civet
+	cd cli; FALAFEL_DEBUG=$(FALAFEL_DEBUG) npx civet build.civet
 
 cli/package-lock.json: cli/package.json
 	cd cli; npm i
@@ -96,4 +97,9 @@ runtime-lib/test/test-framework.o: $(shell find runtime-lib/test/test-framework 
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -Og -g2 -r -o $@ \
 		$(shell find runtime-lib/test/test-framework -name '*.cpp') $(LDFLAGS)
 
-
+# MARK: Install
+.PHONY: install
+install: build-release
+	sudo cp -R $(wildcard dist/include/*) /usr/local/include/
+	sudo cp $(wildcard dist/lib/*) /usr/local/lib/
+	sudo ln -s $$(pwd)/dist/bin/falafel /usr/local/bin/falafel 

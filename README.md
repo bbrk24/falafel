@@ -17,3 +17,5 @@ Compilation:
 - Release build: `make -j $(nproc)`
 - Run tests: `make test`
 - Clean: `make clean`
+
+Debug builds may be run directly via `./dist/bin/falafel`, but release builds should be installed with `make install`.

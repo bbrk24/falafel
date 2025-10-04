@@ -33,7 +33,7 @@ public class Codegen
         NumberFormatter.PositiveInfinitySymbol = "INFINITY";
     }
 
-    private static readonly byte[] Preamble = Encoding.UTF8.GetBytes("#include <runtime.hh>\n");
+    private static readonly byte[] Preamble = Encoding.UTF8.GetBytes("#include <falafel.hh>\n");
     private static readonly byte[] MainEntry = Encoding.UTF8.GetBytes(
         "int main(int argc, const char** argv) {{"
     );
