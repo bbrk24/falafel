@@ -59,3 +59,25 @@ clean-compiler:
 
 clean-parser:
 	rm -Rf parser/dist/
+
+# MARK: Test
+.PHONY: test test-runtime test-compiler
+test: test-runtime test-compiler
+
+test_csharp_files = $(shell find compiler/Compiler.Tests/ -path compiler/Compiler.Tests/obj -prune -o -name '*.cs' -print)
+test-compiler: dotnet_config := Debug
+test-compiler: compiler/Compiler.sln compiler/Compiler/Compiler.csproj $(csharp_files) compiler/Compiler.Tests/Compiler.Tests.csproj $(test_csharp_files)
+	cd compiler; dotnet test
+
+test-runtime: runtime-lib/test/test
+	runtime-lib/test/test
+
+runtime-lib/test/test: runtime-lib/test/test-framework.o runtime-lib/test/main.cpp $(wildcard runtime-lib/test/*.hh) $(cpp_files) $(cpp_src_headers)
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -std=c++20 -Og -g2 -Iruntime-lib/test/test-framework -o $@ \
+		runtime-lib/test/test-framework.o runtime-lib/test/main.cpp $(cpp_files) $(LDFLAGS)
+
+runtime-lib/test/test-framework.o: $(shell find runtime-lib/test/test-framework -name '*.cpp' -or -name '*.hh')
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -std=c++20 -Og -g2 -r -o $@ \
+		$(shell find runtime-lib/test/test-framework -name '*.cpp') $(LDFLAGS)
+
+

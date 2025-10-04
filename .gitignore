@@ -4,3 +4,5 @@ dist/
 node_modules/
 /compiler/**/bin/
 /compiler/**/obj/
+*.o
+/runtime-lib/test/test

@@ -236,6 +236,8 @@ public:
         return static_cast<Object*>(obj_ptr);
     }
 
+    constexpr size_t capacity() const noexcept { return m_capacity; }
+
 private:
     char* m_pointer;
     size_t m_capacity;

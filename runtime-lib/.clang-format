@@ -5,6 +5,9 @@ BinPackArguments: false
 BreakConstructorInitializers: AfterColon
 BreakTemplateDeclarations: Yes
 ColumnLimit: 100
+ForEachMacros:
+  - testgroup
+  - testcase
 InsertNewlineAtEOF: true
 PenaltyReturnTypeOnItsOwnLine: 219
 SpaceAfterTemplateKeyword: false
