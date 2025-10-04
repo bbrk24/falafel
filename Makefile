@@ -2,7 +2,7 @@
 CXXFLAGS := $(CXXFLAGS) -std=c++20 -Wall -Wextra -Wformat-truncation=2 -Wno-sign-compare
 
 .PHONY: build-release build-debug
-common_outputs := dist/obj/libruntime.so dist/include/ dist/bin/compiler dist/bin/parser dist/bin/falafel
+common_outputs := dist/lib/libruntime.so dist/include/ dist/bin/compiler dist/bin/parser dist/bin/falafel
 build-release: $(common_outputs)
 build-debug: $(common_outputs) dist/bin/parser.map dist/bin/falafel.map
 
@@ -14,8 +14,8 @@ build-debug: CXXFLAGS := $(CXXFLAGS) -Og -g2
 cpp_files = $(wildcard runtime-lib/src/*.cpp)
 cpp_src_headers = $(wildcard runtime-lib/src/*.hh)
 
-dist/obj/libruntime.so: dist/ $(cpp_files) $(cpp_src_headers)
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -shared -o dist/obj/libruntime.so -fPIC $(cpp_files) $(LDFLAGS)
+dist/lib/libruntime.so: dist/ $(cpp_files) $(cpp_src_headers)
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -shared -o $@ -fPIC $(cpp_files) $(LDFLAGS)
 
 dist/include/: dist/ $(cpp_src_headers) $(wildcard runtime-lib/include/*.hh)
 	cp -RL runtime-lib/include/ dist/
@@ -27,16 +27,16 @@ dotnet_output_folder = compiler/Compiler/bin/$(dotnet_config)/net8.0/$(dotnet_ru
 dist/bin/compiler: dist/ compiler/Compiler.sln compiler/Compiler/Compiler.csproj $(csharp_files)
 	cd compiler; dotnet publish Compiler/Compiler.csproj -c $(dotnet_config) -r $(dotnet_runtime)
 	-mv $(dotnet_output_folder)/Compiler.exe $(dotnet_output_folder)/Compiler
-	cp $(dotnet_output_folder)/Compiler dist/bin/compiler
-	chmod +x dist/bin/compiler
+	cp $(dotnet_output_folder)/Compiler $@
+	chmod +x $@
 
 # Technically this depends on parser/dist/index.js.map, but the same build process creates both
-dist/bin/parser.map: dist/ parser/dist/index.js
-	cp parser/dist/index.js.map dist/bin/parser.map
+dist/bin/parser.map: parser/dist/index.js dist/
+	cp $< $@
 
-dist/bin/parser: dist/ parser/dist/index.js
-	cp parser/dist/index.js dist/bin/parser
-	chmod +x dist/bin/parser
+dist/bin/parser: parser/dist/index.js dist/
+	cp $< $@
+	chmod +x $@
 
 parser/dist/index.js: parser/package-lock.json parser/build.js $(wildcard parser/src/*)
 	cd parser; node build
@@ -44,12 +44,12 @@ parser/dist/index.js: parser/package-lock.json parser/build.js $(wildcard parser
 parser/package-lock.json: parser/package.json
 	cd parser; npm i
 
-dist/bin/falafel: dist/ cli/dist/index.js
-	cp cli/dist/index.js dist/bin/falafel
-	chmod +x dist/bin/falafel
+dist/bin/falafel: cli/dist/index.js dist/
+	cp $< $@
+	chmod +x $@
 
-dist/bin/falafel.map: dist/ cli/dist/index.js
-	cp cli/dist/index.js.map dist/bin/falafel.map
+dist/bin/falafel.map: cli/dist/index.js dist/
+	cp $< $@
 
 cli/dist/index.js: cli/tsconfig.json cli/package-lock.json cli/build.civet $(wildcard cli/src/*)
 	cd cli; npx civet build.civet
@@ -58,7 +58,7 @@ cli/package-lock.json: cli/package.json
 	cd cli; npm i
 
 dist/:
-	mkdir -p dist/bin/ dist/obj/
+	mkdir -p dist/bin/ dist/lib/
 
 # MARK: Clean
 .PHONY: clean clean-outputs clean-compiler clean-parser clean-cli

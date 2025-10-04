@@ -35,9 +35,11 @@ public class Codegen
 
     private static readonly byte[] Preamble = Encoding.UTF8.GetBytes("#include <runtime.hh>\n");
     private static readonly byte[] MainEntry = Encoding.UTF8.GetBytes(
-        "int main(int argc, const char** argv) {"
+        "int main(int argc, const char** argv) {{"
     );
-    private static readonly byte[] MainExit = Encoding.UTF8.GetBytes("return 0;}");
+    private static readonly byte[] MainExit = Encoding.UTF8.GetBytes(
+        "}Object::collect_cycles();return 0;}"
+    );
 
     private readonly Dictionary<string, uint> _stringLiterals = [];
     private string _beforeMainDecls = "";

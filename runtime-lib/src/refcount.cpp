@@ -16,7 +16,7 @@ void Object::retain() noexcept
 
     ++m_refcount;
 
-    if (m_refcount == UINTPTR_MAX) {
+    if (m_refcount == UINTPTR_MAX) [[unlikely]] {
         panic("Object refcount is too high");
     }
 
