@@ -340,29 +340,25 @@ public enum OperatorFixity
     Infix,
 }
 
-public class Operator
+public record Operator
 {
-    public string Name { get; set; }
-    public OperatorFixity Fixity { get; set; }
-    public Type? LhsType { get; set; }
-    public Type? RhsType { get; set; }
-    public Type ReturnType { get; set; }
-    public bool IsCppOperator { get; set; }
-    public string CppName { get; set; }
-
-    public ICollection<Type> GenericTypes { get; set; } = [];
+    public string Name;
+    public OperatorFixity Fixity;
+    public Type? LhsType;
+    public Type? RhsType;
+    public Type ReturnType;
+    public bool IsCppOperator;
+    public string CppName;
+    public bool LambdaWrapRhs = false;
+    public ICollection<Type> GenericTypes = [];
 
     public Operator Instantiate(Dictionary<Type, Type> parts)
     {
-        return new()
+        return this with
         {
-            Name = Name,
-            Fixity = Fixity,
             LhsType = LhsType?.PartiallyInstantiate(parts),
             RhsType = RhsType?.PartiallyInstantiate(parts),
             ReturnType = ReturnType.PartiallyInstantiate(parts),
-            IsCppOperator = IsCppOperator,
-            CppName = CppName,
             GenericTypes =
             [
                 .. GenericTypes.Select(t =>

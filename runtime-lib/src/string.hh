@@ -56,11 +56,12 @@ public:
     static String* const empty;
 
     RcPointer<String> add(const String* other) const;
-    Bool is_equal(const String* other) const noexcept;
+
+    __attribute__((pure)) Bool is_equal(const String* other) const noexcept;
 
     inline Bool is_not_equal(const String* other) const noexcept { return !is_equal(other); }
 
-    Char _indexget(Int index) const noexcept;
+    __attribute__((pure)) Char _indexget(Int index) const noexcept;
 
     constexpr size_t length() const noexcept { return m_length; }
 

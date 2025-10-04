@@ -238,7 +238,28 @@ public class Codegen
             if (o.Operator.IsCppOperator)
             {
                 var lhsString = o.Lhs is null ? "" : $"({TranslateExpression(o.Lhs)}) ";
-                var rhsString = o.Rhs is null ? "" : $" ({TranslateExpression(o.Rhs)})";
+
+                string rhsString;
+                if (o.Rhs is null)
+                {
+                    rhsString = "";
+                }
+                else if (o.Operator.LambdaWrapRhs)
+                {
+                    var oldBlock = _currentBlock;
+                    var newBlock = new StringBuilder();
+
+                    _currentBlock = newBlock;
+                    var innerString = TranslateExpression(o.Rhs);
+                    _currentBlock = oldBlock;
+
+                    rhsString = $"([&] {{ {newBlock.ToString()} return {innerString}; }})";
+                }
+                else
+                {
+                    rhsString = $" ({TranslateExpression(o.Rhs)})";
+                }
+
                 return lhsString + o.Operator.CppName + rhsString;
             }
             else

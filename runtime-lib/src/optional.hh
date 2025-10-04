@@ -88,5 +88,3 @@ public:
 private:
     RcPointer<T> m_value;
 };
-
-#define OR_ELSE(x, y) (x).or_else([&] { return y; })

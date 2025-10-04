@@ -68,15 +68,18 @@ unless step 'emit-cpp', 'main.cpp', path.join(import.meta.dirname, 'compiler'), 
   return
 
 cppFlags: string[] := []
+
 if process.env.CPPFLAGS
   cppFlags ++= process.env.CPPFLAGS.split ' '
+
+cppFlags.push '-O1'
+
 if process.env.CXXFLAGS
   cppFlags ++= process.env.CXXFLAGS.split ' '
 
 distDir := path.dirname import.meta.dirname
 
 cppFlags.push
-  '-O1'
   '-std=c++20'
   '-lruntime'
   '-I' + path.join distDir, 'include'

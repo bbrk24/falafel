@@ -555,8 +555,9 @@ public static class BuiltIns
             LhsType = Optional,
             RhsType = OptionalGenericPlaceholder,
             ReturnType = OptionalGenericPlaceholder,
-            IsCppOperator = false,
-            CppName = "OR_ELSE",
+            IsCppOperator = true,
+            CppName = ".or_else",
+            LambdaWrapRhs = true,
             GenericTypes = [OptionalGenericPlaceholder],
         },
     ];
