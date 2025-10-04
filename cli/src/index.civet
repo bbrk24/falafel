@@ -1,0 +1,105 @@
+'civet iife'
+
+from yargs import yargs
+from node:fs import * as fs
+from node:path import * as path
+from node:os import { tmpdir }
+from node:child_process import { spawnSync }
+
+argv := yargs process.argv[2..]
+  .alias 'help', 'h'
+  .options
+    'emit-ast':
+      type: 'boolean',
+      describe: 'Emit the AST as JSON'
+      conflicts: 'emit-cpp'
+    'emit-cpp':
+      type: 'boolean'
+      describe: 'Emit the C++ code'
+      conflicts: 'emit-ast'
+    'o':
+      type: 'string'
+      normalize: true
+      describe: 'Output file location. Default to stdout for --emit-ast and --emit-cpp, a.out otherwise.'
+  .strictOptions()
+  .argv |> await
+
+asyncError := (e: Error??): void =>
+  if e?
+    console.error e
+    process.exitCode = 1
+
+do
+  tempdir := fs.mkdtempSync(path.join tmpdir(), 'falafel-') unless argv.'emit-ast'
+  finally
+    if tempdir?
+      fs.rm tempdir, { +recursive }, asyncError
+
+  step := (emitFlag: keyof typeof argv, defaultName: string, executable: string, args: readonly string[]) =>
+    outfile :=
+      if argv[emitFlag]
+        if argv.o
+          fs.openSync argv.o, 'w', 0o644
+        else
+          'inherit' as const
+      else
+        fs.openSync path.join(tempdir!, defaultName), 'wx', 0o600
+    finally
+      if outfile <? 'number'
+        fs.close outfile, asyncError
+
+    { status, signal } := spawnSync
+      executable
+      args
+      { +windowsHide, stdio: ['ignore', outfile, 'inherit'] }
+    
+    if status
+      process.exitCode = status
+      return false
+    if signal
+      console.error `Received signal ${signal}`
+      // FIXME: set exit code
+      return false
+    return !argv[emitFlag]
+
+  unless step 'emit-ast', 'ast.json', path.join(import.meta.dirname, 'parser'), argv._.map .toString()
+    return
+
+  unless step 'emit-cpp', 'main.cpp', path.join(import.meta.dirname, 'compiler'), [path.join tempdir!, 'ast.json']
+    return
+
+  cppFlags: string[] := []
+  if process.env.CPPFLAGS
+    cppFlags ++= process.env.CPPFLAGS.split ' '
+  if process.env.CXXFLAGS
+    cppFlags ++= process.env.CXXFLAGS.split ' '
+
+  distDir := path.dirname import.meta.dirname
+
+  cppFlags.push
+    '-O1'
+    '-std=c++20'
+    '-lruntime'
+    '-I' + path.join distDir, 'include'
+    '-L' + path.join distDir, 'obj'
+  
+  if argv.o
+    cppFlags.push '-o', argv.o
+  
+  cppFlags.push path.join tempdir!, 'main.cpp'
+
+  if process.env.LDFLAGS
+    cppFlags ++= process.env.LDFLAGS.split ' '
+  
+  { status, signal } := spawnSync
+    process.env.CXX || 'g++'
+    cppFlags
+    { +windowsHide, stdio: 'inherit' }
+
+  if status
+    process.exitCode = status
+    return
+  if signal
+    console.error `Received signal ${signal}`
+    // FIXME: set exit code
+    return

@@ -1,0 +1,16 @@
+from esbuild import { build }
+from @danielx/civet/esbuild-plugin import civetPlugin
+from node:path import * as path
+
+await build
+  entryPoints:
+    . path.join 'src', 'index.civet'
+  bundle: true
+  platform: 'node'
+  outdir: 'dist'
+  format: 'esm'
+  plugins:
+    . civetPlugin { +inlineMap }
+  minify: true
+  banner: js: '#!/usr/bin/env node'
+  sourcemap: 'external'

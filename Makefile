@@ -2,12 +2,12 @@
 CXXFLAGS := $(CXXFLAGS) -std=c++20 -Wall -Wextra -Wformat-truncation=2 -Wno-sign-compare
 
 .PHONY: build-release build-debug
-common_outputs := dist/obj/libruntime.so dist/include/ dist/bin/Compiler dist/bin/index.js
+common_outputs := dist/obj/libruntime.so dist/include/ dist/bin/compiler dist/bin/parser dist/bin/falafel
 build-release: $(common_outputs)
-build-debug: $(common_outputs) dist/bin/index.js.map
+build-debug: $(common_outputs) dist/bin/parser.map dist/bin/falafel.map
 
 build-release: dotnet_config := Release
-build-release: CXXFLAGS := $(CXXFLAGS) -O3 -g0 -DNDEBUG
+build-release: CXXFLAGS := $(CXXFLAGS) -O3 -g0 -DNDEBUG -flto
 build-debug: dotnet_config := Debug
 build-debug: CXXFLAGS := $(CXXFLAGS) -Og -g2
 
@@ -24,32 +24,45 @@ dotnet_runtime := $(shell dotnet --info | grep '^ RID:' | tr -s ' ' | cut -d' ' 
 csharp_files = $(shell find compiler/Compiler/ -path compiler/Compiler/obj -prune -o -name '*.cs' -print)
 dotnet_output_folder = compiler/Compiler/bin/$(dotnet_config)/net8.0/$(dotnet_runtime)/publish
 
-dist/bin/Compiler: dist/ compiler/Compiler.sln compiler/Compiler/Compiler.csproj $(csharp_files)
+dist/bin/compiler: dist/ compiler/Compiler.sln compiler/Compiler/Compiler.csproj $(csharp_files)
 	cd compiler; dotnet publish Compiler/Compiler.csproj -c $(dotnet_config) -r $(dotnet_runtime)
 	-mv $(dotnet_output_folder)/Compiler.exe $(dotnet_output_folder)/Compiler
-	cp $(dotnet_output_folder)/Compiler dist/bin/
-	chmod +x dist/bin/Compiler
+	cp $(dotnet_output_folder)/Compiler dist/bin/compiler
+	chmod +x dist/bin/compiler
 
 # Technically this depends on parser/dist/index.js.map, but the same build process creates both
-dist/bin/index.js.map: parser/dist/index.js
-	cp parser/dist/index.js.map dist/bin/
+dist/bin/parser.map: dist/ parser/dist/index.js
+	cp parser/dist/index.js.map dist/bin/parser.map
 
-dist/bin/index.js: parser/dist/index.js
-	cp parser/dist/index.js dist/bin/
-	chmod +x dist/bin/index.js
+dist/bin/parser: dist/ parser/dist/index.js
+	cp parser/dist/index.js dist/bin/parser
+	chmod +x dist/bin/parser
 
-parser/dist/index.js: dist/ parser/package-lock.json parser/build.js $(wildcard parser/src/*)
+parser/dist/index.js: parser/package-lock.json parser/build.js $(wildcard parser/src/*)
 	cd parser; node build
 
 parser/package-lock.json: parser/package.json
 	cd parser; npm i
 
+dist/bin/falafel: dist/ cli/dist/index.js
+	cp cli/dist/index.js dist/bin/falafel
+	chmod +x dist/bin/falafel
+
+dist/bin/falafel.map: dist/ cli/dist/index.js
+	cp cli/dist/index.js.map dist/bin/falafel.map
+
+cli/dist/index.js: cli/tsconfig.json cli/package-lock.json cli/build.civet $(wildcard cli/src/*)
+	cd cli; npx civet build.civet
+
+cli/package-lock.json: cli/package.json
+	cd cli; npm i
+
 dist/:
 	mkdir -p dist/bin/ dist/obj/
 
 # MARK: Clean
-.PHONY: clean clean-outputs clean-compiler clean-parser
-clean: clean-outputs clean-compiler clean-parser
+.PHONY: clean clean-outputs clean-compiler clean-parser clean-cli
+clean: clean-outputs clean-compiler clean-parser clean-cli
 
 clean-outputs:
 	rm -Rf dist/
@@ -59,6 +72,9 @@ clean-compiler:
 
 clean-parser:
 	rm -Rf parser/dist/
+
+clean-cli:
+	rm -Rf cli/dist/
 
 # MARK: Test
 .PHONY: test test-runtime test-compiler
@@ -73,11 +89,11 @@ test-runtime: runtime-lib/test/test
 	runtime-lib/test/test
 
 runtime-lib/test/test: runtime-lib/test/test-framework.o runtime-lib/test/main.cpp $(wildcard runtime-lib/test/*.hh) $(cpp_files) $(cpp_src_headers)
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -std=c++20 -Og -g2 -Iruntime-lib/test/test-framework -o $@ \
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -Og -g2 -Iruntime-lib/test/test-framework -o $@ \
 		runtime-lib/test/test-framework.o runtime-lib/test/main.cpp $(cpp_files) $(LDFLAGS)
 
 runtime-lib/test/test-framework.o: $(shell find runtime-lib/test/test-framework -name '*.cpp' -or -name '*.hh')
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -std=c++20 -Og -g2 -r -o $@ \
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -Og -g2 -r -o $@ \
 		$(shell find runtime-lib/test/test-framework -name '*.cpp') $(LDFLAGS)
 
 

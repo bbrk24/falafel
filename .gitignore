@@ -6,3 +6,4 @@ node_modules/
 /compiler/**/obj/
 *.o
 /runtime-lib/test/test
+package-lock.json

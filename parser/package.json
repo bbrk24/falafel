@@ -6,11 +6,11 @@
   "type": "module",
   "devDependencies": {
     "engine-check": "github:bbrk24/engine-check#6b7fa214f0d5c20508cdad796bd52db4fdcf182f",
-    "esbuild": "^0.25.9",
+    "esbuild": "~0.25.9",
     "prettier": "^3.6.2"
   },
   "engines": {
-    "node": "^22.11.0"
+    "node": "^22.12.0"
   },
   "prettier": {
     "tabWidth": 2,

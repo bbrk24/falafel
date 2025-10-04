@@ -1,8 +1,8 @@
-import esbuild from 'esbuild';
+import { build } from 'esbuild';
 import heraPlugin from '@danielx/hera/esbuild';
 import * as path from 'node:path';
 
-await esbuild.build({
+await build({
   entryPoints: [path.join('src', 'index.js')],
   bundle: true,
   platform: 'node',
