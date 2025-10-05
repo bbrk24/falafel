@@ -311,8 +311,8 @@ public class Method
     }
 
     public Type ReturnType { get; set; }
-
     public BitVector32 OriginallyGenericArguments { get; set; } = new(0);
+    public FunctionDeclaration? Declaration { get; set; } = null;
 
     public override string ToString() =>
         $@"{
@@ -321,9 +321,35 @@ public class Method
             Name
         }({
             string.Join(", ", ArgumentTypes.Select(t => t.ToString()))
-        }) -> {
+        }): {
             ReturnType
         }";
+
+    public bool OverlapsWith(Method other) =>
+        Name == other.Name
+        && _argumentTypes.Length == other.ArgumentTypes.Length
+        && (
+            ReturnType == other.ReturnType
+            || ReturnType.IsInstantiationOf(other.ReturnType)
+            || other.ReturnType.IsInstantiationOf(ReturnType)
+        )
+        && Enumerable
+            .Zip(_argumentTypes, other.ArgumentTypes, Enumerable.Range(0, _argumentTypes.Length))
+            .All(
+                (t) =>
+                {
+                    var (thisType, otherType, i) = t;
+                    return OriginallyGenericArguments[1 << i]
+                        || other.OriginallyGenericArguments[1 << i]
+                        || thisType == otherType;
+                }
+            )
+        && (
+            ThisType == BuiltIns.Void
+            || other.ThisType == BuiltIns.Void
+            || ThisType.IsImplicitlyConvertibleFrom(other.ThisType)
+            || other.ThisType.IsImplicitlyConvertibleFrom(ThisType)
+        );
 }
 
 public class Subscript

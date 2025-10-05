@@ -14,16 +14,17 @@ Comment
   "/*" /(?:[^*]|\*[^\/])*/ "*/"
 
 EOS
-  Comment* /[\n;]/
+  (Comment / /[^\S\n]+/)* /[\n;]/
   _* /(?=\})/
   !. # EOF
 
 Statement
   Declaration
-  Assignment EOS -> $1
-  Expression EOS -> $1
+  ReturnStatement
   ConditionalStatement
   LoopStatement
+  Assignment EOS -> $1
+  Expression EOS -> $1
 
 ConditionalStatement
   /(?<!\w|\d)if/ _* "(" _* Expression:cond _* ")" _* "{" Statements:body "}" _* ElseClause?:alt ->
@@ -47,6 +48,7 @@ Assignment
 Declaration
   ClassDefinition
   VarDeclaration
+  FunctionDeclaration
 
 InheritanceClause
   ":" _* Type -> $3
@@ -76,6 +78,24 @@ TypeClause
 VarDeclaration
   "var" _+ Identifier:name _* TypeClause:declaredType _* "=" _* Expression:value EOS ->
     return { type: 'VarDeclaration', name, declaredType, value, loc: $loc }
+
+FunctionArgument
+  Identifier _* TypeClause ->
+    return { name: $1, type: $3 }
+
+ReturnStatement
+  "return" (_+ Expression)? EOS ->
+    return { type: 'ReturnStatement', value: $2?.[1], loc: $loc }
+
+FunctionDeclaration
+  "func" _+ Identifier:name "(" _* ")" _* TypeClause?:returnType _* "{" Statements:body "}" ->
+    return { type: 'FunctionDeclaration', name, returnType, body, arguments: [], loc: $loc }
+  "func" _+ Identifier:name "(" _* FunctionArgument:arg0 (_* "," _* FunctionArgument)*:args _* ","? _* ")" _* TypeClause?:returnType _* "{" Statements:body "}" ->
+    const arguments_ = [
+      arg0,
+      ...args.map(el => el[3])
+    ];
+    return { type: 'FunctionDeclaration', name, arguments: arguments_, returnType, body, loc: $loc };
 
 # BaseExpression is any expression that is not a BinaryExpression or MemberAccessExpression.
 # BinaryExpression is then built in several layers on top of BaseExpression so as to establish
@@ -195,7 +215,7 @@ CharLiteral
     return { type: 'CharLiteral', value, loc: $loc };
 
 MemberAccessExpression
-  BaseExpression:first (("." _* (FunctionCall / Identifier)) / (_* "[" _* Expression _* "]") / (_* "@" _* Type))*:rest ->
+  BaseExpression:first ((_* "." (FunctionCall / Identifier)) / (_* "[" _* Expression _* "]") / (_* "@" _* Type))*:rest ->
     const result = rest.reduce((acc, curr) => {
       if (curr[0] === '.') {
         return { type: 'MemberAccessExpression', base: acc, member: curr[2] };

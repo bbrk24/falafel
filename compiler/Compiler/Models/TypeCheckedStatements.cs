@@ -1,6 +1,9 @@
 namespace Compiler.Models;
 
-public interface TypeCheckedStatement { }
+public interface TypeCheckedStatement
+{
+    public bool IsReturn => false;
+}
 
 public class TypeCheckedClass : TypeCheckedStatement
 {
@@ -26,6 +29,7 @@ public class TypeCheckedConditional : TypeCheckedStatement
     public TypeCheckedExpression Condition { get; set; }
     public IEnumerable<TypeCheckedStatement> TrueBlock { get; set; }
     public IEnumerable<TypeCheckedStatement> FalseBlock { get; set; }
+    public bool IsReturn => TrueBlock.Any(x => x.IsReturn) && FalseBlock.Any(x => x.IsReturn);
 }
 
 public class TypeCheckedLoop : TypeCheckedStatement
@@ -34,9 +38,28 @@ public class TypeCheckedLoop : TypeCheckedStatement
     public IEnumerable<TypeCheckedStatement> Body { get; set; }
 }
 
+public class TypeCheckedFunctionArgument
+{
+    public string Name { get; set; }
+    public Type Type { get; set; }
+}
+
+public class TypeCheckedFunctionDeclaration : TypeCheckedStatement
+{
+    public Method Method { get; set; }
+    public IEnumerable<TypeCheckedStatement> Body { get; set; }
+    public IEnumerable<TypeCheckedFunctionArgument> Arguments { get; set; }
+}
+
+public class TypeCheckedReturnStatement : TypeCheckedStatement
+{
+    public TypeCheckedExpression? Value { get; set; }
+    bool TypeCheckedStatement.IsReturn => true;
+}
+
 public interface TypeCheckedExpression : TypeCheckedStatement
 {
-    Type Type { get; set; }
+    Type Type { get; }
 }
 
 public class TypedIntegerLiteral : TypeCheckedExpression
@@ -54,7 +77,7 @@ public class TypedDecimalLiteral : TypeCheckedExpression
 public class TypeCheckedStringLiteral : TypeCheckedExpression
 {
     public string Value { get; set; }
-    Type TypeCheckedExpression.Type { get; set; } = BuiltIns.String;
+    Type TypeCheckedExpression.Type => BuiltIns.String;
 }
 
 public class TypeCheckedIdentifier : TypeCheckedExpression
@@ -68,17 +91,13 @@ public class TypeCheckedFunctionCall : TypeCheckedExpression
     public Method Method { get; set; }
     public IEnumerable<TypeCheckedExpression> Arguments { get; set; }
 
-    Type TypeCheckedExpression.Type
-    {
-        get => Method.ReturnType;
-        set => throw new NotSupportedException();
-    }
+    Type TypeCheckedExpression.Type => Method.ReturnType;
 }
 
 public class TypeCheckedStringInterpolation : TypeCheckedExpression
 {
     public IEnumerable<TypeCheckedExpression> Pieces { get; set; }
-    Type TypeCheckedExpression.Type { get; set; } = BuiltIns.String;
+    Type TypeCheckedExpression.Type => BuiltIns.String;
 }
 
 public class TypeCheckedOperatorCall : TypeCheckedExpression
@@ -87,17 +106,13 @@ public class TypeCheckedOperatorCall : TypeCheckedExpression
     public TypeCheckedExpression? Lhs { get; set; }
     public TypeCheckedExpression? Rhs { get; set; }
 
-    Type TypeCheckedExpression.Type
-    {
-        get => Operator.ReturnType;
-        set => throw new NotSupportedException();
-    }
+    Type TypeCheckedExpression.Type => Operator.ReturnType;
 }
 
 public class TypeCheckedBooleanLiteral : TypeCheckedExpression
 {
     public bool Value { get; set; }
-    Type TypeCheckedExpression.Type { get; set; } = BuiltIns.Bool;
+    Type TypeCheckedExpression.Type => BuiltIns.Bool;
 }
 
 public class TypeCheckedIndexAccess : TypeCheckedExpression
@@ -107,11 +122,8 @@ public class TypeCheckedIndexAccess : TypeCheckedExpression
 
     public Subscript Subscript => Base.Type.Subscript ?? throw new InvalidOperationException();
 
-    Type TypeCheckedExpression.Type
-    {
-        get => Base.Type.Subscript?.ReturnType ?? throw new InvalidOperationException();
-        set => throw new NotSupportedException();
-    }
+    Type TypeCheckedExpression.Type =>
+        Base.Type.Subscript?.ReturnType ?? throw new InvalidOperationException();
 }
 
 public class TypeCheckedCastExpression : TypeCheckedExpression
@@ -136,11 +148,7 @@ public class TypeCheckedPropertyAccess : TypeCheckedExpression
     public TypeCheckedExpression Base { get; set; }
     public Property Property { get; set; }
 
-    Type TypeCheckedExpression.Type
-    {
-        get => Property.Type;
-        set => throw new NotSupportedException();
-    }
+    Type TypeCheckedExpression.Type => Property.Type;
 }
 
 public class TypeCheckedMethodCall : TypeCheckedExpression
@@ -149,20 +157,12 @@ public class TypeCheckedMethodCall : TypeCheckedExpression
     public IEnumerable<TypeCheckedExpression> Arguments { get; set; }
     public Method Method { get; set; }
 
-    Type TypeCheckedExpression.Type
-    {
-        get => Method.ReturnType;
-        set => throw new NotSupportedException();
-    }
+    Type TypeCheckedExpression.Type => Method.ReturnType;
 }
 
 public class TypeCheckedCharLiteral : TypeCheckedExpression
 {
     public byte Value { get; set; }
 
-    Type TypeCheckedExpression.Type
-    {
-        get => BuiltIns.Char;
-        set => throw new NotSupportedException();
-    }
+    Type TypeCheckedExpression.Type => BuiltIns.Char;
 }

@@ -26,16 +26,6 @@ try
 
     var root = decoded.Values.Single();
 
-    OrderedDictionary declarations;
-    try
-    {
-        declarations = root.Ast.OfType<Declaration>().ToOrderedDictionary(d => d.Name, d => d);
-    }
-    catch (ArgumentException e)
-    {
-        throw new Exception("Duplicate declaration detected", e);
-    }
-
     var typeCheckedStatements = new TypeChecker(root.LineCounts).CheckTypes(root.Ast);
 
     new Codegen().GenerateCode(typeCheckedStatements, args.Length > 1 ? args[1] : null);

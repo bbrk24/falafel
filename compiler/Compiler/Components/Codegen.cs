@@ -167,6 +167,32 @@ public class Codegen
                 var statement = TranslateExpression(expr) + ";";
                 _currentBlock.Append(statement);
             }
+            else if (node is TypeCheckedReturnStatement rs)
+            {
+                var value = rs.Value is null ? "" : TranslateExpression(rs.Value);
+                _currentBlock.Append($"return {value};");
+            }
+            else if (node is TypeCheckedFunctionDeclaration fd)
+            {
+                var functionSignature =
+                    $@"{
+                        RcPointerWrap(fd.Method.ReturnType)
+                    } {
+                        MangleMethodName(fd.Method)
+                    }({
+                        string.Join(", ", fd.Arguments.Select(a => $"{RcPointerWrap(a.Type)} {a.Name}"))
+                    })";
+
+                _beforeMainDecls += functionSignature + ";";
+
+                var oldBlock = _currentBlock;
+                _currentBlock = new StringBuilder();
+
+                GenerateCodeWithoutWriting(fd.Body);
+
+                _afterMainDecls += $"{functionSignature}{{ {_currentBlock.ToString()} }}";
+                _currentBlock = oldBlock;
+            }
             else
             {
                 throw new ArgumentException($"Invalid type {node.GetType()}", nameof(program));

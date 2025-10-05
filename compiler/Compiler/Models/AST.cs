@@ -79,6 +79,29 @@ public class VarDeclaration : Declaration
     public Location? Loc { get; set; }
 }
 
+public class FunctionArgument
+{
+    public string Name { get; set; }
+    public AstType Type { get; set; }
+}
+
+public class FunctionDeclaration : Declaration
+{
+    public string Type { get; set; }
+    public string Name { get; set; }
+    public AstType? ReturnType { get; set; }
+    public IEnumerable<FunctionArgument> Arguments { get; set; }
+    public IEnumerable<AstNode> Body { get; set; }
+    public Location? Loc { get; set; }
+}
+
+public class ReturnStatement : AstNode
+{
+    public string Type { get; set; }
+    public Expression? Value { get; set; }
+    public Location? Loc { get; set; }
+}
+
 public class AstType : HasLocation
 {
     public string Name { get; set; }

@@ -6,7 +6,7 @@ public class TypeChecker
 {
     private List<Models.Type> _knownTypes;
     private List<Variable> _knownVariables;
-    private List<Method> _knownFunctions = BuiltIns.Methods.ToList();
+    private List<Method> _knownFunctions;
     private readonly List<ulong> _lineCounts;
 
     public TypeChecker(List<ulong> lineCounts)
@@ -14,6 +14,7 @@ public class TypeChecker
         _lineCounts = lineCounts;
         _knownTypes = BuiltIns.Types.ToList();
         _knownVariables = [];
+        _knownFunctions = BuiltIns.Methods.ToList();
     }
 
     public TypeChecker(TypeChecker other)
@@ -21,6 +22,7 @@ public class TypeChecker
         _lineCounts = other._lineCounts;
         _knownTypes = [.. other._knownTypes];
         _knownVariables = [.. other._knownVariables];
+        _knownFunctions = [.. other._knownFunctions];
     }
 
     private int GetLineNumber(Location loc)
@@ -38,16 +40,48 @@ public class TypeChecker
         return null;
     }
 
-    public IEnumerable<TypeCheckedStatement> CheckTypes(IEnumerable<AstNode> program)
+    public IEnumerable<TypeCheckedStatement> CheckTypes(
+        IEnumerable<AstNode> program,
+        Models.Type? returnType = null
+    )
     {
         foreach (var cd in program.OfType<ClassDefinition>())
         {
             yield return CheckClassDefinition(cd);
         }
 
+        foreach (var fd in program.OfType<FunctionDeclaration>())
+        {
+            CheckFunctionTypeFirstPass(fd);
+        }
+
         foreach (var node in program.Where(node => node is not ClassDefinition))
         {
-            if (node is VarDeclaration vd)
+            if (node is ReturnStatement rs)
+            {
+                if (returnType is null)
+                {
+                    throw new TypeCheckException(
+                        "Top-level return statements are not allowed",
+                        GetLineNumber(node)
+                    );
+                }
+                if (rs.Value is null && returnType != BuiltIns.Void)
+                {
+                    throw new TypeCheckException(
+                        "Return statement in non-Void function must return value",
+                        GetLineNumber(node)
+                    );
+                }
+
+                TypeCheckedExpression? value = null;
+                if (rs.Value is not null)
+                {
+                    value = CheckExpressionType(rs.Value, returnType);
+                }
+                yield return new TypeCheckedReturnStatement { Value = value };
+            }
+            else if (node is VarDeclaration vd)
             {
                 var declType =
                     LookupType(vd.DeclaredType)
@@ -114,11 +148,11 @@ public class TypeChecker
                 }
 
                 var condition = CheckExpressionType(cs.Condition, BuiltIns.Bool);
-                var trueBlock = new TypeChecker(this).CheckTypes(cs.TrueBlock);
+                var trueBlock = new TypeChecker(this).CheckTypes(cs.TrueBlock, returnType);
                 IEnumerable<TypeCheckedStatement> falseBlock = [];
                 if (cs.FalseBlock is not null)
                 {
-                    falseBlock = new TypeChecker(this).CheckTypes(cs.FalseBlock);
+                    falseBlock = new TypeChecker(this).CheckTypes(cs.FalseBlock, returnType);
                 }
 
                 yield return new TypeCheckedConditional
@@ -149,9 +183,13 @@ public class TypeChecker
                 }
 
                 var condition = CheckExpressionType(ls.Condition, BuiltIns.Bool);
-                var body = new TypeChecker(this).CheckTypes(ls.Body);
+                var body = new TypeChecker(this).CheckTypes(ls.Body, returnType);
 
                 yield return new TypeCheckedLoop { Condition = condition, Body = body };
+            }
+            else if (node is FunctionDeclaration fd)
+            {
+                yield return CheckFunctionTypeSecondPass(fd);
             }
             else if (node is Expression e)
             {
@@ -162,6 +200,93 @@ public class TypeChecker
                 throw new ArgumentException($"Unrecognized type {node.GetType()}");
             }
         }
+    }
+
+    private void CheckFunctionTypeFirstPass(FunctionDeclaration fd)
+    {
+        var argumentNames = new HashSet<string>();
+        foreach (var arg in fd.Arguments)
+        {
+            if (!argumentNames.Add(arg.Name))
+            {
+                throw new TypeCheckException(
+                    $"Duplicate argument name {arg.Name}",
+                    GetLineNumber(fd)
+                );
+            }
+        }
+
+        var argumentTypes = fd
+            .Arguments.Select(a =>
+                LookupType(a.Type)
+                ?? throw new TypeCheckException(
+                    $"Unrecognized type {a.Type}",
+                    GetLineNumber(a.Type)
+                )
+            )
+            .ToArray();
+
+        var returnType = fd.ReturnType is null
+            ? BuiltIns.Void
+            : LookupType(fd.ReturnType)
+                ?? throw new TypeCheckException(
+                    $"Unrecognized type {fd.ReturnType}",
+                    GetLineNumber(fd.ReturnType)
+                );
+
+        var method = new Method
+        {
+            Name = fd.Name,
+            ArgumentTypes = argumentTypes,
+            ReturnType = returnType,
+            Declaration = fd,
+        };
+
+        var overlaps = _knownFunctions.Where(m => m.OverlapsWith(method));
+        if (overlaps.Any())
+        {
+            throw new TypeCheckException(
+                $"Possible duplicate declaration: {method} is too similar to: {string.Join("; ", overlaps)}",
+                GetLineNumber(fd)
+            );
+        }
+
+        _knownFunctions.Add(method);
+    }
+
+    private TypeCheckedFunctionDeclaration CheckFunctionTypeSecondPass(FunctionDeclaration fd)
+    {
+        var method = _knownFunctions.Single(m => object.ReferenceEquals(fd, m.Declaration));
+
+        var innerChecker = new TypeChecker(this);
+        innerChecker._knownVariables.AddRange(
+            Enumerable
+                .Zip(fd.Arguments, method.ArgumentTypes)
+                .Select(t => new Variable { Name = t.Item1.Name, Type = t.Item2 })
+        );
+
+        var body = innerChecker.CheckTypes(fd.Body, method.ReturnType).ToList();
+
+        if (method.ReturnType != BuiltIns.Void && !body.Any(x => x.IsReturn))
+        {
+            throw new TypeCheckException(
+                "Non-Void function must have a return statement",
+                GetLineNumber(fd)
+            );
+        }
+
+        return new()
+        {
+            Method = method,
+            Body = body,
+            Arguments = Enumerable
+                .Zip(fd.Arguments, method.ArgumentTypes)
+                .Select(t => new TypeCheckedFunctionArgument
+                {
+                    Name = t.Item1.Name,
+                    Type = t.Item2,
+                }),
+        };
     }
 
     private static TReturn ExpectOneSuccess<TOption, TReturn>(
