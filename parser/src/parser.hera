@@ -217,7 +217,7 @@ CharLiteral
 MemberAccessExpression
   BaseExpression:first ((_* "." (FunctionCall / Identifier)) / (_* "[" _* Expression _* "]") / (_* "@" _* Type))*:rest ->
     const result = rest.reduce((acc, curr) => {
-      if (curr[0] === '.') {
+      if (curr[1] === '.') {
         return { type: 'MemberAccessExpression', base: acc, member: curr[2] };
       } else if (curr[1] === '@') {
         return { type: 'CastExpression', value: acc, declaredType: curr[3] };

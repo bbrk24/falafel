@@ -24,15 +24,10 @@ argv := yargs process.argv[2..]
   .strictOptions()
   .argv |> await
 
-asyncError := (e: Error??): void =>
-  if e?
-    console.error e
-    process.exitCode = 1
-
 tempdir := fs.mkdtempSync(path.join tmpdir(), 'falafel-') unless argv.'emit-ast'
 finally
   if tempdir?
-    fs.rm tempdir, { +recursive }, asyncError
+    fs.rmSync tempdir, { +recursive }
 
 step := (emitFlag: keyof typeof argv, defaultName: string, executable: string, args: readonly string[]) =>
   outfile :=
@@ -45,7 +40,7 @@ step := (emitFlag: keyof typeof argv, defaultName: string, executable: string, a
       fs.openSync path.join(tempdir!, defaultName), 'wx', 0o600
   finally
     if outfile <? 'number'
-      fs.close outfile, asyncError
+      fs.closeSync outfile
 
   { status, signal } := spawnSync
     executable
