@@ -7,6 +7,8 @@ public class TypeChecker
     private List<Models.Type> _knownTypes;
     private List<Variable> _knownVariables;
     private List<Method> _knownFunctions;
+    private readonly int _scopeStart;
+
     private readonly List<ulong> _lineCounts;
 
     public TypeChecker(List<ulong> lineCounts)
@@ -15,6 +17,7 @@ public class TypeChecker
         _knownTypes = BuiltIns.Types.ToList();
         _knownVariables = [];
         _knownFunctions = BuiltIns.Methods.ToList();
+        _scopeStart = 0;
     }
 
     public TypeChecker(TypeChecker other)
@@ -23,6 +26,7 @@ public class TypeChecker
         _knownTypes = [.. other._knownTypes];
         _knownVariables = [.. other._knownVariables];
         _knownFunctions = [.. other._knownFunctions];
+        _scopeStart = _knownVariables.Count;
     }
 
     private int GetLineNumber(Location loc)
@@ -83,6 +87,14 @@ public class TypeChecker
             }
             else if (node is VarDeclaration vd)
             {
+                if (VariableNameExistsInLocalScope(vd.Name))
+                {
+                    throw new TypeCheckException(
+                        $"Invalid redeclaration of variable {vd.Name}",
+                        GetLineNumber(vd)
+                    );
+                }
+
                 var declType =
                     LookupType(vd.DeclaredType)
                     ?? throw new TypeCheckException(
@@ -144,7 +156,16 @@ public class TypeChecker
                     || (cs.FalseBlock is not null && cs.FalseBlock.Any(x => x is ClassDefinition))
                 )
                 {
-                    throw new Exception("Conditional class definitions are forbidden");
+                    var lineNumber = Enumerable
+                        .Concat(cs.TrueBlock, cs.FalseBlock ?? [])
+                        .OfType<ClassDefinition>()
+                        .Select(x => GetLineNumber(x))
+                        .FirstOrDefault(x => x is not null);
+
+                    throw new TypeCheckException(
+                        "Conditional class definitions are forbidden",
+                        lineNumber
+                    );
                 }
 
                 var condition = CheckExpressionType(cs.Condition, BuiltIns.Bool);
@@ -200,6 +221,15 @@ public class TypeChecker
                 throw new ArgumentException($"Unrecognized type {node.GetType()}");
             }
         }
+    }
+
+    private bool VariableNameExistsInLocalScope(string name)
+    {
+        if (_knownVariables.Count <= _scopeStart)
+        {
+            return false;
+        }
+        return _knownVariables[_scopeStart..].Any(v => v.Name == name);
     }
 
     private void CheckFunctionTypeFirstPass(FunctionDeclaration fd)

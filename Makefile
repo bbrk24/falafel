@@ -7,9 +7,9 @@ build-release: $(common_outputs)
 build-debug: $(common_outputs) dist/bin/parser.map dist/bin/falafel.map
 
 build-release: dotnet_config := Release
-build-release: CXXFLAGS := $(CXXFLAGS) -O3 -g0 -DNDEBUG -flto
+build-release: CXXFLAGS := -O3 -g0 -DNDEBUG -flto $(CXXFLAGS)
 build-debug: dotnet_config := Debug
-build-debug: CXXFLAGS := $(CXXFLAGS) -Og -g2
+build-debug: CXXFLAGS := -Og -g2 $(CXXFLAGS)
 build-debug: FALAFEL_DEBUG := 1
 
 cpp_files = $(wildcard runtime-lib/src/*.cpp)
@@ -78,8 +78,8 @@ clean-cli:
 	rm -Rf cli/dist/
 
 # MARK: Test
-.PHONY: test test-runtime test-compiler
-test: test-runtime test-compiler
+.PHONY: test test-runtime test-compiler test-parser test-cli
+test: test-runtime test-compiler test-parser test-cli
 
 test_csharp_files = $(shell find compiler/Compiler.Tests/ -path compiler/Compiler.Tests/obj -prune -o -name '*.cs' -print)
 test-compiler: dotnet_config := Debug
@@ -88,6 +88,12 @@ test-compiler: compiler/Compiler.sln compiler/Compiler/Compiler.csproj $(csharp_
 
 test-runtime: runtime-lib/test/test
 	runtime-lib/test/test
+
+test-parser: parser/package-lock.json
+	cd parser; npx engine-check
+
+test-cli: cli/package-lock.json
+	cd cli; npx engine-check
 
 runtime-lib/test/test: runtime-lib/test/test-framework.o runtime-lib/test/main.cpp $(wildcard runtime-lib/test/*.hh) $(cpp_files) $(cpp_src_headers)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -Og -g2 -Iruntime-lib/test/test-framework -o $@ \
