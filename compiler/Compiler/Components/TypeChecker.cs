@@ -187,7 +187,14 @@ public class TypeChecker
             {
                 if (!ls.Body.Any())
                 {
-                    Console.Error.WriteLine("Warning: empty loop");
+                    var message = "Warning: empty loop detected";
+                    var lineNumber = GetLineNumber(ls);
+                    if (lineNumber is not null)
+                    {
+                        message += $" on line {lineNumber}";
+                    }
+
+                    Console.Error.WriteLine(message);
                 }
 
                 if (ls.Body.Any(x => x is ClassDefinition))

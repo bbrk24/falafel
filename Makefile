@@ -86,6 +86,7 @@ test-compiler: dotnet_config := Debug
 test-compiler: compiler/Compiler.sln compiler/Compiler/Compiler.csproj $(csharp_files) compiler/Compiler.Tests/Compiler.Tests.csproj $(test_csharp_files)
 	cd compiler; dotnet test
 
+test-runtime: CXXFLAGS := $(CXXFLAGS) -DFALAFEL_TESTING
 test-runtime: runtime-lib/test/test
 	runtime-lib/test/test
 

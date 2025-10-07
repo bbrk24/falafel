@@ -113,5 +113,3 @@ Bool String::is_equal(const String* other) const noexcept
 
     return memcmp(own_buffer, other_buffer, m_length * sizeof(char8_t)) == 0;
 }
-
-void String::visit_children(std::function<void(Object*)>) { }

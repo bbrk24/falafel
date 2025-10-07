@@ -28,6 +28,16 @@ struct Counter {
     inline Counter& operator=(const Counter&) noexcept { return *this; }
     inline Counter& operator=(Counter&&) noexcept { return *this; }
 };
+
+struct VisitCounter {
+    int8_t count = 0;
+
+    void visit_children(std::function<void(Object*)> visitor)
+    {
+        ++count;
+        visitor(nullptr);
+    }
+};
 }
 
 testgroup (cowbuffer) {
@@ -98,5 +108,46 @@ testgroup (cowbuffer) {
         cb.realloc(4U);
 
         test_assume(Counter::count == 2, "realloc should not leak copies");
+    }
+    , testcase (visits_struct_children)
+    {
+        CowBuffer<VisitCounter> cb(3U);
+        cb.length_mut() = 2U;
+
+        int8_t visit_count = 0;
+        std::function<void(Object*)> visitor = [&](Object*) { ++visit_count; };
+
+        static_cast<Object*>(cb)->visit_children(visitor);
+
+        test_assert(visit_count == 2, "visitor should be called twice total");
+        test_assert(cb[0U].count == 1, "first child should be visited once");
+        test_assert(cb[1U].count == 1, "second child should be visited once");
+    }
+    , testcase (visits_object_children)
+    {
+        {
+            CowBuffer<RcPointer<Object>> cb(3U);
+            cb.length_mut() = 2U;
+
+            Object* obj1 = new Object(LeafMarker {});
+            Object* obj2 = new Object(LeafMarker {});
+
+            new (cb + 0) RcPointer<Object>(obj1);
+            new (cb + 1) RcPointer<Object>(obj2);
+
+            int8_t visit_count = 0;
+            std::function<void(Object*)> visitor = [&](Object* ptr) {
+                test_assert(
+                    ptr == obj1 || ptr == obj2,
+                    "Object pointer should point at allocated object"
+                );
+                ++visit_count;
+            };
+
+            static_cast<Object*>(cb)->visit_children(visitor);
+
+            test_assert(visit_count == 2, "visitor should be called twice total");
+        }
+        Object::collect_cycles();
     }
 };

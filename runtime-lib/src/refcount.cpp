@@ -1,15 +1,27 @@
 #include "refcount.hh"
 #include "panic.hh"
-// TODO: rewrite collect_cycles to not use std::vector
-#include <algorithm>
-#include <vector>
+#include <cstddef>
+
+static_assert(MAX_NUM_ROOTS <= PTRDIFF_MAX);
 
 static size_t num_roots = 0U;
+
+Object::~Object() noexcept
+{
+    if (m_buffered) {
+        panic("Destroying buffered root");
+    }
+    m_destroyed = true;
+}
 
 void Object::visit_children(std::function<void(Object*)>) { }
 
 void Object::retain() noexcept
 {
+    if (m_destroyed) [[unlikely]] {
+        panic("Retaining zombie object");
+    }
+
     if (m_refcount == UINTPTR_MAX) {
         return;
     }
@@ -20,17 +32,19 @@ void Object::retain() noexcept
         panic("Object refcount is too high");
     }
 
-    m_color = ObjectColor::black;
+    if (m_color != ObjectColor::green) {
+        m_color = ObjectColor::black;
+    }
 }
 
 void Object::release()
 {
-    if (m_refcount == UINTPTR_MAX) {
+    if (m_refcount == UINTPTR_MAX || m_destroyed) {
         return;
     }
 
     --m_refcount;
-    if (m_refcount == 0) {
+    if (m_refcount == 0U) {
         visit_children([](auto child) {
             if (child != nullptr) {
                 child->release();
@@ -42,7 +56,7 @@ void Object::release()
             free(this);
             return;
         }
-    } else if (m_color != ObjectColor::purple) {
+    } else if (m_color != ObjectColor::purple && m_color != ObjectColor::green) {
         m_color = ObjectColor::purple;
         buffer_root();
     }
@@ -70,12 +84,14 @@ void Object::mark_gray()
     if (m_color != ObjectColor::gray) {
         m_color = ObjectColor::gray;
         visit_children([](auto child) {
-            if (child == nullptr || child->m_refcount == UINTPTR_MAX) {
+            if (child == nullptr || child->m_refcount == UINTPTR_MAX || child->m_destroyed) {
                 return;
             }
 
             child->m_refcount--;
-            child->mark_gray();
+            if (child->m_color != ObjectColor::green) {
+                child->mark_gray();
+            }
         });
     }
 }
@@ -89,7 +105,7 @@ void Object::scan_gray()
     } else {
         m_color = ObjectColor::white;
         visit_children([](auto child) {
-            if (child != nullptr && child->m_color == ObjectColor::gray) {
+            if (child != nullptr && child->m_color == ObjectColor::gray && !child->m_destroyed) {
                 child->scan_gray();
             }
         });
@@ -100,11 +116,11 @@ void Object::scan_black()
 {
     m_color = ObjectColor::black;
     visit_children([](auto child) {
-        if (child == nullptr || child->m_refcount == UINTPTR_MAX) {
+        if (child == nullptr || child->m_refcount == UINTPTR_MAX || child->m_destroyed) {
             return;
         }
         child->m_refcount++;
-        if (child->m_color != ObjectColor::black) {
+        if (child->m_color != ObjectColor::black && child->m_color != ObjectColor::green) {
             child->scan_black();
         }
     });
@@ -118,7 +134,7 @@ void Object::collect_white()
     if (m_color == ObjectColor::white && !m_buffered) {
         m_color = ObjectColor::black;
         visit_children([](auto child) {
-            if (child != nullptr) {
+            if (child != nullptr && !child->m_destroyed) {
                 child->collect_white();
             }
         });
@@ -130,16 +146,18 @@ void Object::collect_white()
 
 void Object::collect_cycles()
 {
-    // Mark
-    std::vector<size_t> removal_indices;
+    static size_t removal_indices[MAX_NUM_ROOTS];
+    ptrdiff_t removal_indices_count = 0;
 
+    // Mark
     for (size_t i = 0U; i < num_roots; ++i) {
         auto* obj = roots[i];
         if (obj->m_color == ObjectColor::purple) {
             obj->mark_gray();
         } else {
             obj->m_buffered = false;
-            removal_indices.push_back(i);
+            removal_indices[removal_indices_count] = i;
+            ++removal_indices_count;
             if (obj->m_color == ObjectColor::black && obj->m_refcount == 0U) {
                 obj->~Object();
                 free(obj);
@@ -147,13 +165,13 @@ void Object::collect_cycles()
         }
     }
 
-    std::reverse(removal_indices.begin(), removal_indices.end());
-    for (size_t i : removal_indices) {
-        if (i > num_roots) {
+    for (ptrdiff_t i = removal_indices_count - 1; i >= 0; --i) {
+        size_t index = removal_indices[i];
+        if (index > num_roots) {
             continue;
         }
-        if (i < num_roots) {
-            roots[i] = roots[num_roots - 1];
+        if (index < num_roots) {
+            roots[index] = roots[num_roots - 1];
         }
         --num_roots;
     }

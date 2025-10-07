@@ -71,9 +71,6 @@ public:
 
     constexpr Int f_lengthib() const noexcept { return static_cast<Int>(length()); }
 
-protected:
-    virtual void visit_children(std::function<void(Object*)> visitor) override;
-
 private:
     static String* allocate_runtime_utf8(size_t length);
 
@@ -84,7 +81,7 @@ private:
     };
 
     constexpr String(Flags flags, Data data, size_t length) noexcept :
-        Object(), m_flags(flags), m_data(data), m_length(length)
+        Object(LeafMarker {}), m_flags(flags), m_data(data), m_length(length)
     {
     }
     constexpr String(Flags flags, Data data, size_t length, ImmortalMarker im) noexcept :

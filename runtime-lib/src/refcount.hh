@@ -12,14 +12,16 @@
 
 constexpr size_t MAX_NUM_ROOTS = 1024U;
 
-enum class ObjectColor : uint_least8_t {
+enum class ObjectColor : unsigned char {
     black,
     gray,
     white,
     purple,
+    green,
 };
 
 struct ImmortalMarker { };
+struct LeafMarker { };
 
 class Object {
 public:
@@ -54,21 +56,39 @@ public:
 
     static void collect_cycles();
 
-    constexpr Object() noexcept : m_refcount(1U), m_color(ObjectColor::black), m_buffered(false) { }
-    constexpr Object(ImmortalMarker) noexcept :
-        m_refcount(UINTPTR_MAX), m_color(ObjectColor::black), m_buffered(false)
+    constexpr Object() noexcept :
+        m_refcount(1U), m_color(ObjectColor::black), m_buffered(false), m_destroyed(false)
     {
     }
+
+    constexpr Object(ImmortalMarker) noexcept :
+        m_refcount(UINTPTR_MAX), m_color(ObjectColor::black), m_buffered(false), m_destroyed(false)
+    {
+    }
+
+    constexpr Object(LeafMarker) noexcept :
+        m_refcount(1U), m_color(ObjectColor::green), m_buffered(false), m_destroyed(false)
+    {
+    }
+
     Object(const Object&) = delete;
-    virtual ~Object() = default;
+    virtual ~Object() noexcept;
+
+#ifdef FALAFEL_TESTING
+public:
+#else
+protected:
+#endif
+    virtual void visit_children(std::function<void(Object*)> visitor);
 
 protected:
-    virtual void visit_children(std::function<void(Object*)> visitor);
+    constexpr bool is_destroyed() const noexcept { return m_destroyed; }
 
 private:
     uintptr_t m_refcount;
     ObjectColor m_color : 3;
     bool m_buffered : 1;
+    bool m_destroyed : 1;
 
     static inline Object* roots[MAX_NUM_ROOTS];
     void buffer_root();
