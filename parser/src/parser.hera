@@ -14,8 +14,8 @@ Comment
   "/*" /(?:[^*]|\*[^\/])*/ "*/"
 
 EOS
-  (Comment / /[^\S\n]+/)* /[\n;]/
-  _* /(?=\})/
+  (Comment / /[^\S\n]+/)* "\n"
+  _* (";" / /(?=\})/)
   !. # EOF
 
 Statement
@@ -104,6 +104,7 @@ BaseExpression
   # Some notes on ordering:
   # - All literals besides StringLiteral and CharLiteral must come before Identifier
   # - I think FunctionCall must come before paren handling but I haven't proven it
+  ConstructorCall
   FunctionCall
   BooleanLiteral
   StringInterpolation
@@ -118,6 +119,17 @@ BaseExpression
   PrefixExpression
   ArrayLiteral
 
+# WARNING: This can accept empty string. Don't use this in a place where that would cause problems.
+CommaSeparatedExpressions
+  _* Expression:first (_* "," _* Expression)*:rest _* ","? _* ->
+    return [first, ...rest.map(el => el[3])]
+  _* ->
+    return []
+
+ConstructorCall
+  "new" _+ Type "(" CommaSeparatedExpressions ")" ->
+    return { type: 'ConstructorCall', target: $3, arguments: $5, loc: $loc }
+
 BooleanLiteral
   /(?<!\w|\d)(?:true|false)(?!\w|\d)/ ->
     return { type: 'BooleanLiteral', value: $0 === 'true', loc: $loc }
@@ -127,14 +139,8 @@ PrefixExpression
     return { type: "PrefixExpression", operator: $1, operand: $2, loc: $loc }
 
 FunctionCall
-  Identifier "(" _* ")" ->
-    return { type: 'FunctionCall', function: $1, arguments: [], loc: $loc }
-  Identifier "(" _* Expression:arg0 (_* "," _* Expression)*:args _* ","? _* ")" ->
-    const arguments_ = [
-      arg0,
-      ...args.map(el => el[3])
-    ];
-    return { type: 'FunctionCall', function: $1, arguments: arguments_, loc: $loc };
+  Identifier "(" CommaSeparatedExpressions ")" ->
+    return { type: 'FunctionCall', function: $1, arguments: $3, loc: $loc };
 
 NumberLiteral
   "-"? "0x" /[0-9a-fA-F]+/ ->
@@ -193,15 +199,8 @@ StringLiteral
     return { type: 'StringLiteral', value: JSON.parse($0.replaceAll(/\\(['`\$])/gu, $1)), loc: $loc }
 
 ArrayLiteral
-  "[" (_* Expression _* "," _*)*:head (Expression _* ("," _*)?)?:tail "]" ->
-    const values = [];
-    if (head?.length) {
-      values.push(...head.map(el => el[1]));
-    }
-    if (tail?.[0] != null) {
-      values.push(tail[0]);
-    }
-    return { type: 'ArrayLiteral', values, loc: $loc };
+  "[" CommaSeparatedExpressions "]" ->
+    return { type: 'ArrayLiteral', values: $2, loc: $loc };
 
 CharLiteral
   "'" /[^\\'\n]|\\[\\"`nrt\$']/:char "'" ->

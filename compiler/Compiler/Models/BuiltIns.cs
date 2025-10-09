@@ -2,7 +2,15 @@ namespace Compiler.Models;
 
 public static class BuiltIns
 {
-    public static readonly Type Object = new() { Name = "Object", IsInheritable = true };
+    private static readonly Method ObjectToStringMethod = new Method { Name = "toString" };
+
+    public static readonly Type Object = new()
+    {
+        Name = "Object",
+        IsInheritable = true,
+        Methods = [new Constructor(), ObjectToStringMethod],
+    };
+
     public static readonly Type Void = new() { Name = "Void", IsObject = false };
     public static readonly Type Int = new() { Name = "Int", IsObject = false };
     public static readonly Type Double = new() { Name = "Double", IsObject = false };
@@ -564,6 +572,13 @@ public static class BuiltIns
 
     static BuiltIns()
     {
+        ObjectToStringMethod.ReturnType = String;
+
+        foreach (var method in Object.Methods)
+        {
+            method.ThisType = Object;
+        }
+
         foreach (var method in String.Methods)
         {
             method.ThisType = String;

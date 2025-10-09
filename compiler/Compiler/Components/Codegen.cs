@@ -204,7 +204,22 @@ public class Codegen
     {
         if (expr is TypeCheckedFunctionCall fc)
         {
-            return $"{MangleMethodName(fc.Method)}({string.Join(", ", fc.Arguments.Select(TranslateExpression))})";
+            var argumentsString = string.Join(", ", fc.Arguments.Select(TranslateExpression));
+            if (fc.Method is Constructor c)
+            {
+                var ctorString =
+                    $"{RcPointerWrap(c.ThisType, skipOuter: true)}{{ {argumentsString} }}";
+
+                if (c.ThisType.IsObject)
+                {
+                    ctorString = "new " + ctorString;
+                }
+                return ctorString;
+            }
+            else
+            {
+                return $"{MangleMethodName(fc.Method)}({argumentsString})";
+            }
         }
         else if (expr is TypedIntegerLiteral il)
         {
@@ -510,12 +525,12 @@ public class Codegen
         return result;
     }
 
-    private static string RcPointerWrap(Models.Type t)
+    private static string RcPointerWrap(Models.Type t, bool skipOuter = false)
     {
-        var arguments = t.GenericTypes.Select(RcPointerWrap);
+        var arguments = t.GenericTypes.Select(x => RcPointerWrap(x, false));
         var fullName =
             t.GenericTypes.Count > 0 ? $"{t.Name}<{string.Join(", ", arguments)} >" : t.Name;
-        if (t.IsObject)
+        if (!skipOuter && t.IsObject)
         {
             return $"RcPointer<{fullName} >";
         }

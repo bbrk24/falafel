@@ -413,6 +413,44 @@ public class TypeChecker
                 }
             );
         }
+        else if (expr is ConstructorCall cc)
+        {
+            var targetType =
+                LookupType(cc.Target)
+                ?? throw new TypeCheckException(
+                    $"Unrecognized type {cc.Target}",
+                    GetLineNumber(cc)
+                );
+
+            if (expectedType is not null && !expectedType.IsImplicitlyConvertibleFrom(targetType))
+            {
+                throw new TypeCheckException(
+                    $"Cannot convert constructor call on {cc.Target} to type {expectedType}",
+                    GetLineNumber(cc)
+                );
+            }
+
+            var constructorCandidates = targetType.Constructors.Where(c =>
+                c.ArgumentTypes.Length == cc.Arguments.Count()
+            );
+            if (!constructorCandidates.Any())
+            {
+                throw new TypeCheckException(
+                    $"{cc.Target} has no constructors that take {cc.Arguments.Count()} arguments"
+                );
+            }
+
+            return ExpectOneSuccess(
+                constructorCandidates,
+                c =>
+                {
+                    var arguments = Enumerable
+                        .Zip(cc.Arguments, c.ArgumentTypes)
+                        .Select(t => CheckExpressionType(t.Item1, t.Item2));
+                    return new TypeCheckedFunctionCall { Method = c, Arguments = arguments };
+                }
+            );
+        }
         else if (expr is DecimalLiteral dl)
         {
             if (expectedType == BuiltIns.Float)
@@ -810,7 +848,9 @@ public class TypeChecker
             }
             else if (mae.Member is FunctionCall fc0)
             {
-                var methods = base_.Type.Methods.Where(m => m.Name == fc0.Function);
+                var methods = base_
+                    .Type.GetAllMethods()
+                    .Where(m => m.Name == fc0.Function && !m.IsStatic);
 
                 if (!methods.Any())
                 {

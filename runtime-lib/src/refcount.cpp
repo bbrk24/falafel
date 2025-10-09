@@ -1,8 +1,11 @@
 #include "refcount.hh"
 #include "panic.hh"
+#include "stringbuilder.hh"
 #include <cstddef>
 
 static_assert(MAX_NUM_ROOTS <= PTRDIFF_MAX);
+
+static const TypeInfo object_info = TypeInfo { .name = String::allocate_small_utf8(u8"Object") };
 
 static size_t num_roots = 0U;
 
@@ -12,6 +15,22 @@ Object::~Object() noexcept
         panic("Destroying buffered root");
     }
     m_destroyed = true;
+}
+
+const TypeInfo& Object::get_type_info() const noexcept { return object_info; }
+
+RcPointer<String> Object::f_toStringsb()
+{
+    StringBuilder sb(3U);
+    sb.add_piece(u8'<');
+    sb.add_piece(get_type_info().name);
+
+    char pointer_string[21U];
+    size_t length
+        = snprintf(pointer_string, sizeof(pointer_string), ":%p>", static_cast<void*>(this));
+    sb.add_runtime_allocated_piece(pointer_string, length);
+
+    return sb.build();
 }
 
 void Object::visit_children(std::function<void(Object*)>) { }

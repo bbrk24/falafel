@@ -23,6 +23,8 @@ public:
     inline void add_piece(const RcPointer<String>& piece) { m_pieces.push(piece); }
     inline void add_piece(RcPointer<String>&& piece) { m_pieces.push(std::move(piece)); }
 
+    void add_runtime_allocated_piece(char* piece, size_t length);
+
     void add_piece(Int piece);
     void add_piece(Float piece);
     void add_piece(Double piece);
@@ -68,6 +70,12 @@ public:
         } else {
             add_piece(null_str);
         }
+    }
+
+    template<typename T>
+    void add_piece(RcPointer<T> piece)
+    {
+        m_pieces.push(piece->f_toStringsb());
     }
 
     RcPointer<String> build();

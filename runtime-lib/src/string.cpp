@@ -7,12 +7,16 @@
 
 String* const String::empty = String::allocate_small_utf8(u8"");
 
+static const TypeInfo string_info = TypeInfo { .name = String::allocate_small_utf8(u8"String") };
+
 String::~String() noexcept
 {
     if (!m_flags.is_immortal && !m_flags.is_small) {
         free(m_data.char8_ptr);
     }
 }
+
+const TypeInfo& String::get_type_info() const noexcept { return string_info; }
 
 String* String::allocate_runtime_utf8(size_t length)
 {

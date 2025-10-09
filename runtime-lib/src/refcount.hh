@@ -5,6 +5,7 @@
 // part (which involves red and orange nodes) is not implemented as programs are currently always
 // single-threaded.
 
+#include "typeinfo.hh"
 #include <cstdint>
 #include <cstdlib>
 #include <functional>
@@ -22,82 +23,6 @@ enum class ObjectColor : unsigned char {
 
 struct ImmortalMarker { };
 struct LeafMarker { };
-
-class Object {
-public:
-    static inline void* operator new(size_t size)
-    {
-        void* ptr = malloc(size);
-        if (ptr == nullptr) [[unlikely]] {
-            collect_cycles();
-            ptr = malloc(size);
-            if (ptr == nullptr) {
-                throw std::bad_alloc();
-            }
-        }
-
-        return ptr;
-    }
-
-    static inline void* operator new(size_t size, void* location) noexcept
-    {
-        return ::operator new(size, location);
-    }
-
-    /**
-     * DO NOT CALL THIS DIRECTLY. This is only to be used in case of initialization failure.
-     */
-    static inline void operator delete(void* location) noexcept { free(location); }
-
-    void retain() noexcept;
-    void release();
-
-    constexpr bool is_unique() const noexcept { return m_refcount < 2U; }
-
-    static void collect_cycles();
-
-    constexpr Object() noexcept :
-        m_refcount(1U), m_color(ObjectColor::black), m_buffered(false), m_destroyed(false)
-    {
-    }
-
-    constexpr Object(ImmortalMarker) noexcept :
-        m_refcount(UINTPTR_MAX), m_color(ObjectColor::black), m_buffered(false), m_destroyed(false)
-    {
-    }
-
-    constexpr Object(LeafMarker) noexcept :
-        m_refcount(1U), m_color(ObjectColor::green), m_buffered(false), m_destroyed(false)
-    {
-    }
-
-    Object(const Object&) = delete;
-    virtual ~Object() noexcept;
-
-#ifdef FALAFEL_TESTING
-public:
-#else
-protected:
-#endif
-    virtual void visit_children(std::function<void(Object*)> visitor);
-
-protected:
-    constexpr bool is_destroyed() const noexcept { return m_destroyed; }
-
-private:
-    uintptr_t m_refcount;
-    ObjectColor m_color : 3;
-    bool m_buffered : 1;
-    bool m_destroyed : 1;
-
-    static inline Object* roots[MAX_NUM_ROOTS];
-    void buffer_root();
-
-    void mark_gray();
-    void scan_gray();
-    void scan_black();
-    void collect_white();
-};
 
 template<typename T>
 class RcPointer final {
@@ -164,8 +89,90 @@ public:
     constexpr T* operator->() const noexcept { return m_obj; }
 
     constexpr operator T*() const noexcept { return m_obj; }
-    constexpr operator bool() const noexcept { return m_obj != nullptr; }
+    constexpr explicit operator bool() const noexcept { return m_obj != nullptr; }
 
 private:
     T* m_obj;
+};
+
+class String;
+
+class Object {
+public:
+    static inline void* operator new(size_t size)
+    {
+        void* ptr = malloc(size);
+        if (ptr == nullptr) [[unlikely]] {
+            collect_cycles();
+            ptr = malloc(size);
+            if (ptr == nullptr) {
+                throw std::bad_alloc();
+            }
+        }
+
+        return ptr;
+    }
+
+    static inline void* operator new(size_t size, void* location) noexcept
+    {
+        return ::operator new(size, location);
+    }
+
+    /**
+     * DO NOT CALL THIS DIRECTLY. This is only to be used in case of initialization failure.
+     */
+    static inline void operator delete(void* location) noexcept { free(location); }
+
+    void retain() noexcept;
+    void release();
+
+    constexpr bool is_unique() const noexcept { return m_refcount < 2U; }
+
+    static void collect_cycles();
+
+    constexpr Object() noexcept :
+        m_refcount(1U), m_color(ObjectColor::black), m_buffered(false), m_destroyed(false)
+    {
+    }
+
+    constexpr Object(ImmortalMarker) noexcept :
+        m_refcount(UINTPTR_MAX), m_color(ObjectColor::black), m_buffered(false), m_destroyed(false)
+    {
+    }
+
+    constexpr Object(LeafMarker) noexcept :
+        m_refcount(1U), m_color(ObjectColor::green), m_buffered(false), m_destroyed(false)
+    {
+    }
+
+    Object(const Object&) = delete;
+    virtual ~Object() noexcept;
+
+    virtual const TypeInfo& get_type_info() const noexcept;
+
+    virtual RcPointer<String> f_toStringsb();
+
+#ifdef FALAFEL_TESTING
+public:
+#else
+protected:
+#endif
+    virtual void visit_children(std::function<void(Object*)> visitor);
+
+protected:
+    constexpr bool is_destroyed() const noexcept { return m_destroyed; }
+
+private:
+    uintptr_t m_refcount;
+    ObjectColor m_color : 3;
+    bool m_buffered : 1;
+    bool m_destroyed : 1;
+
+    static inline Object* roots[MAX_NUM_ROOTS];
+    void buffer_root();
+
+    void mark_gray();
+    void scan_gray();
+    void scan_black();
+    void collect_white();
 };

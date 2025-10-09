@@ -6,5 +6,6 @@
 #include "falafel/string.hh"
 #include "falafel/stringbuilder.hh"
 #include "falafel/typedefs.hh"
+#include "falafel/typeinfo.hh"
 
 #include <cmath>

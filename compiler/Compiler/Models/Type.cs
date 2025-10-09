@@ -12,6 +12,11 @@ public class Type : IEquatable<Type>
     public Type? BaseType { get; set; }
     public Subscript? Subscript { get; set; }
 
+    public IEnumerable<Constructor> Constructors => Methods.OfType<Constructor>();
+
+    public IEnumerable<Method> GetAllMethods() =>
+        BaseType is null ? Methods : Enumerable.Concat(BaseType.GetAllMethods(), Methods);
+
     private bool _isObject;
     public bool IsObject
     {
@@ -293,8 +298,9 @@ public class Property
 
 public class Method
 {
-    public string Name { get; set; }
+    public virtual string Name { get; set; }
     public Type ThisType { get; set; } = BuiltIns.Void;
+    public virtual bool IsStatic { get; set; } = false;
 
     private Type[] _argumentTypes = [];
     public Type[] ArgumentTypes
@@ -310,7 +316,7 @@ public class Method
         }
     }
 
-    public Type ReturnType { get; set; }
+    public virtual Type ReturnType { get; set; }
     public BitVector32 OriginallyGenericArguments { get; set; } = new(0);
     public FunctionDeclaration? Declaration { get; set; } = null;
 
@@ -320,7 +326,7 @@ public class Method
         }{
             Name
         }({
-            string.Join(", ", ArgumentTypes.Select(t => t.ToString()))
+            string.Join(", ", _argumentTypes.Select(t => t.ToString()))
         }): {
             ReturnType
         }";
@@ -347,9 +353,37 @@ public class Method
         && (
             ThisType == BuiltIns.Void
             || other.ThisType == BuiltIns.Void
-            || ThisType.IsImplicitlyConvertibleFrom(other.ThisType)
-            || other.ThisType.IsImplicitlyConvertibleFrom(ThisType)
+            || (
+                IsStatic == other.IsStatic && IsStatic
+                    ? ThisType == other.ThisType
+                    : ThisType.IsImplicitlyConvertibleFrom(other.ThisType)
+                        || other.ThisType.IsImplicitlyConvertibleFrom(ThisType)
+            )
         );
+}
+
+public class Constructor : Method
+{
+    public override string Name
+    {
+        get => "init";
+        set => throw new NotSupportedException();
+    }
+
+    public override bool IsStatic
+    {
+        get => true;
+        set => throw new NotSupportedException();
+    }
+
+    public override Type ReturnType
+    {
+        get => ThisType;
+        set => throw new NotSupportedException();
+    }
+
+    public override string ToString() =>
+        $"{ThisType}.init({string.Join(", ", ArgumentTypes.Select(t => t.ToString()))})";
 }
 
 public class Subscript

@@ -234,3 +234,11 @@ public class CharLiteral : Expression
     public char Value { get; set; }
     public Location? Loc { get; set; }
 }
+
+public class ConstructorCall : Expression
+{
+    public string Type { get; set; }
+    public AstType Target { get; set; }
+    public IEnumerable<Expression> Arguments { get; set; }
+    public Location? Loc { get; set; }
+}

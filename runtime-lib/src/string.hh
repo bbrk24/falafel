@@ -71,6 +71,10 @@ public:
 
     constexpr Int f_lengthib() const noexcept { return static_cast<Int>(length()); }
 
+    inline virtual RcPointer<String> f_toStringsb() override { return this; }
+
+    virtual const TypeInfo& get_type_info() const noexcept override;
+
 private:
     static String* allocate_runtime_utf8(size_t length);
 

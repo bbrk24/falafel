@@ -14,6 +14,14 @@ static String* const nan_str = String::allocate_small_utf8(u8"NaN");
 static String* const true_str = String::allocate_small_utf8(u8"true");
 static String* const false_str = String::allocate_small_utf8(u8"false");
 
+void StringBuilder::add_runtime_allocated_piece(char* piece, size_t length)
+{
+    String* str = String::allocate_runtime_utf8(length);
+    memcpy(str->m_data.char8_ptr, piece, length);
+    str->m_length = length;
+    m_pieces.push(str);
+}
+
 void StringBuilder::add_piece(Int piece)
 {
     String* str = String::allocate_runtime_utf8(20U);
