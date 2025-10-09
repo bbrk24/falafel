@@ -11,7 +11,7 @@ static size_t num_roots = 0U;
 
 Object::~Object() noexcept
 {
-    if (m_buffered) {
+    if (m_buffered) [[unlikely]] {
         panic("Destroying buffered root");
     }
     m_destroyed = true;

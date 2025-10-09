@@ -78,23 +78,30 @@ public:
 private:
     static String* allocate_runtime_utf8(size_t length);
 
-    union Data {
+    constexpr const char8_t* buffer_ptr() const noexcept
+    {
+        return m_flags.is_small   ? m_data.short_string
+            : m_flags.is_immortal ? m_data.char8_literal
+                                  : m_data.char8_ptr;
+    }
+
+    union __attribute__((packed)) Data {
         char8_t* char8_ptr;
         const char8_t* char8_literal;
         char8_t short_string[MAX_SHORT_STRING_LEN];
     };
 
     constexpr String(Flags flags, Data data, size_t length) noexcept :
-        Object(LeafMarker {}), m_flags(flags), m_data(data), m_length(length)
+        Object(LeafMarker {}), m_data(data), m_flags(flags), m_length(length)
     {
     }
     constexpr String(Flags flags, Data data, size_t length, ImmortalMarker im) noexcept :
-        Object(im), m_flags(flags), m_data(data), m_length(length)
+        Object(im), m_data(data), m_flags(flags), m_length(length)
     {
     }
 
-    Flags m_flags;
     Data m_data;
+    Flags m_flags;
     size_t m_length;
 };
 
