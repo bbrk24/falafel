@@ -60,8 +60,11 @@ testgroup (cowbuffer) {
         new (cb + 0) Counter();
         new (cb + 1) Counter();
         test_assume(Counter::count == 2, "Should have created two instances");
-        CowBuffer<Counter> cb2(cb);
-        test_assert(Counter::count == 2, "Should not have created additional copies");
+        {
+            CowBuffer<Counter> cb2(cb);
+            test_assert(Counter::count == 2, "Should not have created additional copies");
+        }
+        test_assert(Counter::count == 2, "Should not have destroyed instances");
     }
     , testcase (copies_on_ensure_unique)
     {

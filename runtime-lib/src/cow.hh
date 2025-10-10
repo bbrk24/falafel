@@ -23,6 +23,19 @@ private:
     public:
         size_t m_length;
 
+        ~Header() noexcept(std::is_nothrow_destructible_v<T>)
+        {
+            if constexpr (!std::is_trivially_destructible_v<T>) {
+                if (!is_destroyed()) [[likely]] {
+                    T* base_pointer
+                        = reinterpret_cast<T*>(reinterpret_cast<char*>(this) + header_offset());
+                    for (size_t i = 0U; i < m_length; ++i) {
+                        base_pointer[i].~T();
+                    }
+                }
+            }
+        }
+
     protected:
         inline void visit_children(std::function<void(Object*)> visitor) final override
         {
@@ -50,7 +63,9 @@ public:
     CowBuffer(const CowBuffer<T>& other) noexcept :
         m_pointer(other.m_pointer), m_capacity(other.m_capacity)
     {
-        static_cast<Object*>(*this)->retain();
+        if (m_pointer != nullptr) {
+            static_cast<Object*>(*this)->retain();
+        }
     }
 
     CowBuffer(CowBuffer<T>&& other) noexcept :
@@ -60,7 +75,12 @@ public:
         other.m_pointer = nullptr;
     }
 
-    ~CowBuffer() { clear(); }
+    ~CowBuffer()
+    {
+        if (m_pointer != nullptr) {
+            static_cast<Object*>(*this)->release();
+        }
+    }
 
     CowBuffer<T>& operator=(const CowBuffer<T>& other)
     {

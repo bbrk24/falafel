@@ -119,7 +119,9 @@ public:
     }
 
     /**
-     * DO NOT CALL THIS DIRECTLY. This is only to be used in case of initialization failure.
+     * WARNING: Call this with extreme care, as it bypasses refcounting logic and may free an object
+     * referenced elsewhere. This mostly exists for internal use and in case of initialization
+     * failure.
      */
     static inline void operator delete(void* location) noexcept { free(location); }
 

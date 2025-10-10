@@ -71,8 +71,7 @@ void Object::release()
         });
         m_color = ObjectColor::black;
         if (!m_buffered) {
-            this->~Object();
-            free(this);
+            delete this;
             return;
         }
     } else if (m_color != ObjectColor::purple && m_color != ObjectColor::green) {
@@ -157,8 +156,7 @@ void Object::collect_white()
                 child->collect_white();
             }
         });
-        this->~Object();
-        free(this);
+        delete this;
         return;
     }
 }
@@ -178,8 +176,7 @@ void Object::collect_cycles()
             removal_indices[removal_indices_count] = i;
             ++removal_indices_count;
             if (obj->m_color == ObjectColor::black && obj->m_refcount == 0U) {
-                obj->~Object();
-                free(obj);
+                delete obj;
             }
         }
     }
