@@ -7,11 +7,11 @@
 #include <test_framework.hh>
 
 #ifndef test_assume
-#define test_assume(condition, reason)                                                             \
-    do {                                                                                           \
-        if (!(condition)) {                                                                        \
-            test_skip(reason);                                                                     \
-        }                                                                                          \
+#define test_assume(condition, reason) \
+    do {                               \
+        if (!(condition)) {            \
+            test_skip(reason);         \
+        }                              \
     } while (false)
 #endif
 

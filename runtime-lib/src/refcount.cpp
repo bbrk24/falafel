@@ -17,17 +17,18 @@ Object::~Object() noexcept
     m_destroyed = true;
 }
 
-const TypeInfo& Object::get_type_info() const noexcept { return object_info; }
+const TypeInfo& Object::get_type_info_static() noexcept { return object_info; }
+const TypeInfo& Object::get_type_info_dynamic() const noexcept { return object_info; }
 
 RcPointer<String> Object::f_toStringsb()
 {
     StringBuilder sb(3U);
     sb.add_piece(u8'<');
-    sb.add_piece(get_type_info().name);
+    sb.add_piece(get_type_info_dynamic().name);
 
     char pointer_string[21U];
     size_t length
-        = snprintf(pointer_string, sizeof(pointer_string), ":%p>", static_cast<void*>(this));
+        = snprintf(pointer_string, sizeof pointer_string, ":%p>", static_cast<void*>(this));
     sb.add_runtime_allocated_piece(pointer_string, length);
 
     return sb.build();

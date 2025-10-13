@@ -27,6 +27,8 @@ struct LeafMarker { };
 template<typename T>
 class RcPointer final {
 public:
+    static const TypeInfo& get_type_info_static() { return T::get_type_info_static(); }
+
     constexpr RcPointer(T* obj) noexcept : m_obj(obj) { }
     constexpr RcPointer() noexcept : m_obj(nullptr) { }
 
@@ -150,7 +152,8 @@ public:
     Object(const Object&) = delete;
     virtual ~Object() noexcept;
 
-    virtual const TypeInfo& get_type_info() const noexcept;
+    static const TypeInfo& get_type_info_static() noexcept;
+    virtual const TypeInfo& get_type_info_dynamic() const noexcept;
 
     virtual RcPointer<String> f_toStringsb();
 

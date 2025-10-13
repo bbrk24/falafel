@@ -1,13 +1,30 @@
 #pragma once
 
 #include "cow.hh"
+#include "mallocator.hh"
 #include "panic.hh"
 #include "typedefs.hh"
+#include "typeinfo.hh"
 #include <cstddef>
 #include <cstring>
 #include <functional>
 #include <new>
+#include <unordered_map>
 #include <utility>
+
+class String;
+
+namespace falafel_internal {
+extern std::unordered_map<
+    TypeInfo, TypeInfo, std::hash<TypeInfo>, falafel_internal::MethodEquality<TypeInfo>,
+    falafel_internal::Mallocator<std::pair<const TypeInfo, TypeInfo>>
+>
+    array_typeinfos;
+
+extern String* const array_str;
+
+const TypeInfo& make_array_info(const TypeInfo& element_info);
+}
 
 template<typename T>
 struct Array final {
@@ -78,6 +95,17 @@ public:
     void visit_children(std::function<void(Object*)> visitor) { visitor(m_buffer); }
 
     void clear() { m_buffer.clear(); }
+
+    static const TypeInfo& get_type_info_static()
+    {
+        const TypeInfo& element_info = get_type_info<T>();
+        auto iter = falafel_internal::array_typeinfos.find(element_info);
+        if (iter != falafel_internal::array_typeinfos.end()) {
+            return iter->second;
+        } else {
+            return falafel_internal::make_array_info(element_info);
+        }
+    }
 
     Int f_lengthib() const noexcept { return static_cast<Int>(length()); }
     Void f_clearvb() { clear(); }

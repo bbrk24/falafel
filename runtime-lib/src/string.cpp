@@ -18,7 +18,8 @@ String::~String() noexcept
     }
 }
 
-const TypeInfo& String::get_type_info() const noexcept { return string_info; }
+const TypeInfo& String::get_type_info_static() noexcept { return string_info; }
+const TypeInfo& String::get_type_info_dynamic() const noexcept { return string_info; }
 
 String* String::allocate_runtime_utf8(size_t length)
 {

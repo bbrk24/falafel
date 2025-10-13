@@ -8,6 +8,7 @@
 
 class String final : public Object {
     friend struct StringBuilder;
+    friend struct TypeInfo;
 
 private:
     struct Flags {
@@ -57,11 +58,11 @@ public:
 
     RcPointer<String> add(const String* other) const;
 
-    __attribute__((pure)) Bool is_equal(const String* other) const noexcept;
+    Bool is_equal(const String* other) const noexcept __attribute__((pure));
 
     inline Bool is_not_equal(const String* other) const noexcept { return !is_equal(other); }
 
-    __attribute__((pure)) Char _indexget(Int index) const noexcept;
+    Char _indexget(Int index) const noexcept __attribute__((pure));
 
     constexpr size_t length() const noexcept { return m_length; }
 
@@ -73,7 +74,8 @@ public:
 
     inline virtual RcPointer<String> f_toStringsb() override { return this; }
 
-    virtual const TypeInfo& get_type_info() const noexcept override;
+    static const TypeInfo& get_type_info_static() noexcept;
+    virtual const TypeInfo& get_type_info_dynamic() const noexcept override;
 
 private:
     static String* allocate_runtime_utf8(size_t length);

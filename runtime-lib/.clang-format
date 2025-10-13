@@ -1,7 +1,9 @@
 BasedOnStyle: WebKit
 AlignAfterOpenBracket: BlockIndent
+AlignEscapedNewlines: Left
 AllowAllArgumentsOnNextLine: false
 BinPackArguments: false
+BreakBeforeTemplateCloser: true
 BreakConstructorInitializers: AfterColon
 BreakTemplateDeclarations: Yes
 ColumnLimit: 100
