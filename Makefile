@@ -33,7 +33,7 @@ dist/bin/compiler: dist/ compiler/Compiler.sln compiler/Compiler/Compiler.csproj
 
 # Technically this depends on parser/dist/index.js.map, but the same build process creates both
 dist/bin/parser.map: parser/dist/index.js dist/
-	cp $< $@
+	cp $(<).map $@
 
 dist/bin/parser: parser/dist/index.js dist/
 	cp $< $@
@@ -50,7 +50,7 @@ dist/bin/falafel: cli/dist/index.js dist/
 	chmod +x $@
 
 dist/bin/falafel.map: cli/dist/index.js dist/
-	cp $< $@
+	cp $(<).map $@
 
 cli/dist/index.js: cli/tsconfig.json cli/package-lock.json cli/build.civet $(wildcard cli/src/*)
 	cd cli; FALAFEL_DEBUG=$(FALAFEL_DEBUG) npx civet build.civet
