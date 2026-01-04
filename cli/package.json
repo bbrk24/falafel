@@ -13,5 +13,7 @@
   },
   "dependencies": {
     "yargs": "^18.0.0"
-  }
+  },
+  "name": "falafel",
+  "man": "man/falafel.1"
 }

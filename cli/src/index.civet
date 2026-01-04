@@ -6,8 +6,9 @@ from node:path import * as path
 from node:os import { tmpdir }
 from node:child_process import { spawnSync }
 
-argv := yargs process.argv[2..]
+y .= yargs process.argv[2..]
   .alias 'help', 'h'
+  .hide 'version'
   .options
     'emit-ast':
       type: 'boolean',
@@ -21,8 +22,18 @@ argv := yargs process.argv[2..]
       type: 'string'
       normalize: true
       describe: 'Output file location. Default to stdout for --emit-ast and --emit-cpp, a.out otherwise.'
+  .usage '$0 [options] [--] <filename>'
   .strictOptions()
-  .argv |> await
+
+if not comptime Boolean process.env.FALAFEL_DEBUG
+  y = y.epilogue 'See `man falafel` for more information.'
+
+argv := await y.argv
+
+if argv._# is 0
+  y.showHelp()
+  process.exitCode = 1
+  return
 
 tempdir := fs.mkdtempSync(path.join tmpdir(), 'falafel-') unless argv.'emit-ast'
 finally

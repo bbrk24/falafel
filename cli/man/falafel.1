@@ -1,0 +1,56 @@
+.TH FALAFEL 1 2026-01-03
+.SH NAME
+falafel \- compile falafel scripts
+.SH SYNOPSIS
+.B falafel
+[\fIoption\fR] ... [\fB\-\-\fR]
+.I file
+.SH DESCRIPTION
+.B falafel
+compiles scripts written in the falafel programming language.
+Depending on the flags, this may emit an executable, C++ code, or the raw AST JSON.
+.SH OPTIONS
+.TP
+\fB\-o\fR \fIFILE\fR
+Sets the output file location.
+If this flag is not specified, the default is \fIa.out\fR when building an executable or printing to stdout otherwise.
+.TP
+.B \-\-emit\-cpp
+Emit C++ code without compiling it.
+.TP
+.B \-\-emit\-ast
+Parse the file and dump the raw JSON AST.
+This option is provided to aid with debugging the compiler itself.
+.TP
+.BR \-h ", " \-\-help
+Show a condensed help page.
+.SH EXIT STATUS
+.B falafel
+generally returns \fB0\fR on success and \fB1\fR on failure.
+If the C++ compiler returns an unusual exit code,
+.B falafel
+will return the same exit code.
+If one of its child processes is killed by a signal,
+.B falafel
+also sends that signal to itself, which may result in other exit codes.
+.SH ENVIRONMENT
+.IP CXX
+The C++ compiler to use when building executables.
+.B falafel
+assumes that this compiler invokes the linker as well.
+If not specified,
+.B falafel
+looks up
+.B g++
+in the path.
+.IP CPPFLAGS
+Preprocessor-related flags to be passed to the C++ compiler.
+Split on spaces.
+.IP LDFLAGS
+Linker-related flags to be passed to the C++ compiler.
+Split on spaces.
+.B falafel
+assumes that lld or mold is used for the linker, as GNU ld does not behave correctly in all cases.
+.IP CXXFLAGS
+Other flags to be passed to the C++ compiler.
+Split on spaces.

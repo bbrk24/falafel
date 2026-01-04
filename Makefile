@@ -107,6 +107,7 @@ runtime-lib/test/test-framework.o: $(shell find runtime-lib/test/test-framework 
 # MARK: Install
 .PHONY: install
 install: build-release
-	sudo cp -R $(wildcard dist/include/*) /usr/local/include/
 	sudo cp $(wildcard dist/lib/*) /usr/local/lib/
-	sudo ln -s $$(pwd)/dist/bin/falafel /usr/local/bin/falafel 
+	sudo cp -R $(wildcard dist/include/*) /usr/local/include/
+	sudo ln -s $$(pwd)/dist/bin/falafel /usr/local/bin/falafel
+	sudo cp $(wildcard cli/man/*.1) /usr/local/share/man/man1/
